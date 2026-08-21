@@ -1,0 +1,17 @@
+# Neovim generated files
+*.swp
+*.swo
+*.swn
+*.un~
+.nvimlog
+
+# Lua tooling and test artifacts
+luacov.stats.out
+luacov.report.out
+coverage/
+
+# Local project planning and agent state
+.planative/
+
+# Generated comment stores
+.nvim-agent-comments.json
