@@ -41,6 +41,7 @@ Required fields:
 - `path`: normalized POSIX relative path from the repository root.
 - `start_line`, `end_line`: positive, one-based inclusive line numbers captured at creation.
 - `context`: bounded source lines captured around the target range.
+- `context_start_offset`: zero-based offset of the target start within `context`.
 - `body`: non-empty comment text.
 - `created_at`, `updated_at`: UTC timestamps.
 - `status`: `resolved` or `stale`.

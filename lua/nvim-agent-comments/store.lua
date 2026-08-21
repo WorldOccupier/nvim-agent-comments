@@ -14,6 +14,7 @@ local TEMP_FILE_SEPARATOR = '.tmp.'
 local ID_FORMAT = 'c_%x_%x'
 local STATUS_RESOLVED = 'resolved'
 local STATUS_STALE = 'stale'
+local ZERO = 0
 
 M.VERSION = STORE_VERSION
 
@@ -52,6 +53,12 @@ local function validate_comment(comment, index)
   end
   if not is_array(comment.context) then
     return fail(prefix .. '.context must be an array')
+  end
+  if comment.context_start_offset ~= nil
+      and (type(comment.context_start_offset) ~= 'number'
+        or comment.context_start_offset < ZERO
+        or comment.context_start_offset ~= math.floor(comment.context_start_offset)) then
+    return fail(prefix .. '.context_start_offset must be a non-negative integer')
   end
   for context_index, line in ipairs(comment.context) do
     if type(line) ~= 'string' then
