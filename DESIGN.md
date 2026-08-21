@@ -6,6 +6,8 @@ The persistent visual guide is [show-me-ui-design.html](show-me-ui-design.html).
 
 The assumptions and implementation decisions in this document are approved for later sessions. Do not revisit them unless implementation reveals a Neovim limitation or the user requests a UI change.
 
+The storage, root, command, and retrieval contract is recorded in [CONTRACT.md](CONTRACT.md).
+
 ## Comment editor
 
 - `:NvimAgentCommentsAdd` opens a temporary, editable scratch buffer in a floating window positioned directly below the target line.

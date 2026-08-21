@@ -18,4 +18,4 @@ The UI contract for the first version is recorded in [DESIGN.md](DESIGN.md). Imp
 - There is no project-wide list UI in v1.
 - Keymaps are opt-in. Commands are the stable interface.
 
-See [DESIGN.md](DESIGN.md) for the complete behavior, commands, and edge cases. Use [show-me-ui-design.html](show-me-ui-design.html) as the visual source of truth when implementing or changing the UI. Open it with `open show-me-ui-design.html`.
+See [DESIGN.md](DESIGN.md) for the complete behavior, commands, and edge cases. See [CONTRACT.md](CONTRACT.md) for the JSON schema, root rules, command API, and retrieval output. Use [show-me-ui-design.html](show-me-ui-design.html) as the visual source of truth when implementing or changing the UI. Open it with `open show-me-ui-design.html`.
