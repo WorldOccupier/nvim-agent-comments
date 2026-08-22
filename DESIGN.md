@@ -17,15 +17,15 @@ The storage, root, command, and retrieval contract is recorded in [CONTRACT.md](
 
 Use two layers:
 
-1. **Persistent saved comments:** use buffer-local extmarks with `virt_lines` and `virt_lines_above = false`. Each comment gets an extmark at its resolved start line. The virtual lines render the full-width comment box below the source line without inserting text into the file. Extmarks move with edits, so the stored context resolver can verify or correct the anchor later. Use `sign_text` or a separate sign extmark for the resolved and stale markers.
-2. **Active editing:** use a temporary scratch buffer in a small floating window positioned below the target extmark. The floating window provides real editing and normal insert-mode behavior. On submit, replace the virtual display with the saved comment. On cancel, remove the temporary window and leave the store unchanged.
+1. **Persistent saved comments:** use extmarks with `virt_lines` anchored below the resolved range. The virtual lines render a styled, display-only box without changing the source buffer or creating navigable windows. Signs identify resolved and stale comments.
+2. **Active editing:** use a temporary scratch buffer in a centered floating dialog over the entire editor. The dialog has a dimmed backdrop, rounded border, blue title, editable body, and muted helper text. On submit, replace it with the `virt_lines` display. On cancel, remove the dialog and backdrop and leave the store unchanged.
 
-Virtual lines are display-only, so the `[x]` shown in the visual guide is represented by a command or key action rather than a clickable control. The active editor can show the same label and offer the same action through a keymap.
+Saved comments are display-only and cannot receive the cursor. The `[x]` shown in the visual guide is represented by a command or key action rather than a clickable control.
 
 Approved assumptions:
 
-- Saved comments use extmarks with `virt_lines`.
-- New and edited comments use a temporary floating scratch buffer.
+- Saved comments use extmarks with styled `virt_lines`.
+- New and edited comments use a centered floating scratch buffer with a dimmed backdrop.
 - The source buffer is never modified by comment rendering or editing.
 - Extmarks provide approximate tracking; stored context remains authoritative for stale detection.
 - Comments at the same anchor render oldest first.

@@ -4,7 +4,7 @@ A Neovim plugin for leaving short, project-local comments that coding agents can
 
 ## Current status
 
-The UI contract for the first version is recorded in [DESIGN.md](DESIGN.md). Implementation has not started yet.
+The UI contract for the first version is recorded in [DESIGN.md](DESIGN.md). The core comment workflow is implemented.
 
 ## UI contract summary
 
@@ -16,6 +16,7 @@ The UI contract for the first version is recorded in [DESIGN.md](DESIGN.md). Imp
 - Submit saves the comment and keeps its inline box visible. Cancel or empty input does not write anything.
 - Optional signcolumn markers identify saved and stale comments.
 - There is no project-wide list UI in v1.
+- Commands are available for add, edit, delete, jump, and re-anchor.
 - Keymaps are opt-in. Commands are the stable interface.
 
 See [DESIGN.md](DESIGN.md) for the complete behavior, commands, and edge cases. See [CONTRACT.md](CONTRACT.md) for the JSON schema, root rules, command API, and retrieval output. Use [show-me-ui-design.html](show-me-ui-design.html) as the visual source of truth when implementing or changing the UI. Open it with `open show-me-ui-design.html`.
