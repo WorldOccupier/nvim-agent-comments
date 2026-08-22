@@ -67,9 +67,9 @@ Commands are registered without default keymaps:
 
 - `:NvimAgentCommentsAdd` adds a comment to the current line.
 - `:NvimAgentCommentsAddVisual` adds a comment to the visual line range.
-- `:NvimAgentCommentsEdit` edits the selected comment at the current line.
-- `:NvimAgentCommentsDelete` deletes the selected comment after confirmation.
-- `:NvimAgentCommentsJump` jumps to a selected comment at the current line.
+- `:NvimAgentCommentsEdit` edits a comment whose range contains the current line.
+- `:NvimAgentCommentsDelete` deletes a comment whose range contains the current line immediately. If several comments contain the line, it asks which one to delete.
+- `:NvimAgentCommentsJump` jumps to the start of a comment whose range contains the current line.
 - `:NvimAgentCommentsReanchor` attaches a stale comment to the current line or visual range.
 - `:NvimAgentCommentsRetrieve` writes JSON retrieval output for the current project. An optional path argument filters comments by relative path.
 

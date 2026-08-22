@@ -2,8 +2,6 @@
 
 This document locks the first-version comment UI before implementation begins.
 
-The persistent visual guide is [show-me-ui-design.html](show-me-ui-design.html). Agents implementing or reviewing UI work must use it alongside this document. Open it with `open show-me-ui-design.html`.
-
 The assumptions and implementation decisions in this document are approved for later sessions. Do not revisit them unless implementation reveals a Neovim limitation or the user requests a UI change.
 
 The storage, root, command, and retrieval contract is recorded in [CONTRACT.md](CONTRACT.md).
@@ -18,9 +16,9 @@ The storage, root, command, and retrieval contract is recorded in [CONTRACT.md](
 Use two layers:
 
 1. **Persistent saved comments:** use extmarks with `virt_lines` anchored below the resolved range. The virtual lines render a styled, display-only box without changing the source buffer or creating navigable windows. Signs identify resolved and stale comments.
-2. **Active editing:** use a temporary scratch buffer in a centered floating dialog over the entire editor. The dialog has a dimmed backdrop, rounded border, blue title, editable body, and muted helper text. On submit, replace it with the `virt_lines` display. On cancel, remove the dialog and backdrop and leave the store unchanged.
+2. **Active editing:** use a temporary scratch buffer in a centered floating dialog over the entire editor. The dialog has a dimmed backdrop, rounded border, a blue title embedded in the top border, and compact horizontal padding around the editable body. On submit, replace it with the `virt_lines` display. On cancel, remove the dialog and backdrop and leave the store unchanged.
 
-Saved comments are display-only and cannot receive the cursor. The `[x]` shown in the visual guide is represented by a command or key action rather than a clickable control.
+Saved comments are display-only and cannot receive the cursor. Commands and key actions handle editing and deletion.
 
 Approved assumptions:
 
@@ -36,22 +34,22 @@ This keeps source buffers unchanged and avoids treating comments as file content
 - The input uses `vim.ui.input` for the v1 body. The UI adapter must keep the editor anchored below the selected source line so a later multiline editor can replace the input without changing the workflow.
 - Submit saves the comment and closes the editor. Cancel closes it without writing the store. Empty input behaves like cancel.
 - The editor is modal for the active comment. Opening another comment is blocked until it is submitted or cancelled.
-- The current-line add command opens the editor below the cursor line. The visual-range command anchors it below the end of the selected range.
+- The current-line add command opens the editor below the cursor line. The visual-range command anchors it below the end of the selected range. Closing the editor returns Neovim to normal mode.
 
 ## Existing comments
 
-- Resolved comments render persistently as full-width inline comment boxes directly below their anchored source line or range. The box does not alter the file's text or write comment text into the buffer.
-- Each inline box shows the comment body and a close/delete control on the right. Selecting the body or using the edit command opens it for editing.
-- A comment marker uses an optional signcolumn sign at its resolved start line. Signs are disabled unless enabled in `setup()`.
-- `:NvimAgentCommentsEdit` edits the comment associated with the current line. If there is more than one, it asks the user to choose by comment ID and body preview.
+- Resolved comments render persistently as inline comment boxes directly below their anchored source line or range. Each box is at most 100 display columns wide and shrinks for narrower editors. The box does not alter the file's text or write comment text into the buffer.
+- Each inline box shows the comment body. The edit and delete commands act on the comment at the current line.
+- A one-line comment uses one optional signcolumn marker. A range comment uses `┌`, `│`, and `└` signs to mark every resolved line. Signs are disabled unless enabled in `setup()`.
+- `:NvimAgentCommentsEdit` edits the comment whose range contains the current line. If there is more than one, it asks the user to choose by comment ID and body preview.
 - `:NvimAgentCommentsJump` moves to the resolved start line. Stale comments jump to their original line when possible and report that the anchor is stale.
-- `:NvimAgentCommentsDelete` asks for confirmation before deleting the selected comment.
+- `:NvimAgentCommentsDelete` deletes the only comment whose range contains the current line. If there is more than one, it asks the user which comment to delete.
 - The first version has no project-wide picker or list buffer.
 
 ## State and edge cases
 
-- New comments use the same full-width inline box, with an editable input and submit/cancel controls.
-- Saved comments remain visible as full-width inline boxes below their resolved anchors. The box uses a subdued border and does not obscure source text.
+- New comments use the centered floating editor, with an editable input and submit/cancel controls.
+- Saved comments remain visible as inline boxes up to 100 display columns wide below their resolved anchors. The box uses a subdued border and does not obscure source text.
 - The optional sign identifies the box's anchor. It is removed when the comment is deleted.
 - Stale comments use a separate sign and retain their original range and context. Their inline box shows the stale state and offers an explicit re-anchor action.
 - Multiple comments at one line share the line's marker and render oldest first, top to bottom. Edit and delete commands disambiguate them with `vim.ui.select`.
@@ -64,13 +62,14 @@ This keeps source buffers unchanged and avoids treating comments as file content
 
 These are initial defaults, subject to adjustment during implementation:
 
-- Insert mode in the active editor accepts normal text entry.
+- Insert mode in the active editor accepts normal text entry after a `❯ ` prompt.
+- The compact editor has one input line, so the cursor cannot move onto decorative content.
 - `<CR>` submits the comment.
 - `<Esc>` cancels the editor.
 - `<C-c>` also cancels, as a fallback for terminal workflows.
 - `q` closes a saved comment display when the comment is selected.
 - `e` opens the selected comment in the editor.
-- `d` deletes the selected comment after confirmation.
+- `d` deletes the selected comment.
 - `r` re-anchors a stale comment to the current line or visual range.
 - `]c` and `[c` move between comment anchors in the current buffer.
 
@@ -83,7 +82,7 @@ Commands are registered by the plugin and mappings remain opt-in through `setup(
 - `:NvimAgentCommentsAdd` adds a comment to the current line.
 - `:NvimAgentCommentsAddVisual` adds a comment to the visual range.
 - `:NvimAgentCommentsEdit` edits a comment at the current line.
-- `:NvimAgentCommentsDelete` deletes a comment at the current line after confirmation.
+- `:NvimAgentCommentsDelete` deletes a comment at the current line, selecting it first when several share the line.
 - `:NvimAgentCommentsJump` jumps to a comment selected at the current line.
 - `:NvimAgentCommentsRetrieve` prints machine-readable project comments for headless use.
 
@@ -94,7 +93,7 @@ The default setup has no keymaps. Users may map add, edit, delete, and jump them
 ```text
 source buffer
   target line
-  ┌────────────────────────────────────────────────────────────── [x]
+  ┌─────────────────────────────────────────────────────────────────
   │ Your comment text
   └─────────────────────────────────────────────────────────────────
   following source line

@@ -6,7 +6,7 @@ Comments live in `.nvim-agent-comments.json` at the Git repository or worktree r
 
 ## Requirements
 
-- Neovim 0.9 or newer
+- Neovim 0.9 or newer. The floating comment editor uses window titles introduced in Neovim 0.9.
 - Git repository or worktree
 
 ## Installation
@@ -35,7 +35,9 @@ use {
 
 The plugin registers its commands automatically. Call `setup()` to change options or add mappings.
 
-## Setup
+## Setup and shortcuts
+
+Copy this block into your Neovim config. It maps every plugin command:
 
 ```lua
 require('nvim-agent-comments').setup({
@@ -48,6 +50,8 @@ require('nvim-agent-comments').setup({
       ['<leader>ce'] = '<cmd>NvimAgentCommentsEdit<cr>',
       ['<leader>cd'] = '<cmd>NvimAgentCommentsDelete<cr>',
       ['<leader>cj'] = '<cmd>NvimAgentCommentsJump<cr>',
+      ['<leader>cr'] = '<cmd>NvimAgentCommentsReanchor<cr>',
+      ['<leader>ct'] = '<cmd>NvimAgentCommentsRetrieve<cr>',
     },
     x = {
       ['<leader>ca'] = ':NvimAgentCommentsAddVisual<cr>',
@@ -57,7 +61,18 @@ require('nvim-agent-comments').setup({
 })
 ```
 
-`keymaps` defaults to `false`. The plugin does not create global mappings unless you provide this table. `context_lines` defaults to `2`, and `signs` defaults to `true`.
+| Shortcut | Mode | Action |
+| --- | --- | --- |
+| `<leader>ca` | Normal | Add a comment to the current line |
+| `<leader>ca` | Visual | Add a comment to the selected lines |
+| `<leader>ce` | Normal | Edit the comment at the current line |
+| `<leader>cd` | Normal | Delete the comment at the current line |
+| `<leader>cj` | Normal | Jump to the comment at the current line |
+| `<leader>cr` | Normal | Re-anchor a stale comment to the current line |
+| `<leader>cr` | Visual | Re-anchor a stale comment to the selected lines |
+| `<leader>ct` | Normal | Retrieve all project comments as JSON |
+
+`keymaps` defaults to `false`. During setup, the plugin creates mappings only when `keymaps` is a table like the example above. Change the left-hand keys if they conflict with your config. `context_lines` defaults to `2`, and `signs` defaults to `true`.
 
 ## Commands
 
@@ -71,7 +86,9 @@ require('nvim-agent-comments').setup({
 | `:NvimAgentCommentsReanchor` | Attach a stale comment to the current line or range |
 | `:NvimAgentCommentsRetrieve [path]` | Write project comments as JSON, optionally filtered by path |
 
-Adding or editing opens a one-line floating editor. Press `<CR>` to submit or `<Esc>` to cancel. Saved comments render below their resolved ranges with virtual lines, so source text stays unchanged.
+Adding or editing opens a one-line floating editor. Press Enter (`<CR>`) to submit or Escape (`<Esc>`) to cancel. Neovim returns to normal mode when the editor closes. Saved comments render below their resolved ranges with virtual lines, so source text stays unchanged.
+
+Range comments show `┌`, `│`, and `└` signs beside every line they cover, and their box title includes the resolved range. Edit, delete, and jump commands work from any line inside that range.
 
 If stored context has no unique match, the plugin marks the comment stale instead of moving it to a guessed location.
 
@@ -123,5 +140,3 @@ Run the headless test suite with:
 ```sh
 make test
 ```
-
-[DESIGN.md](DESIGN.md) records the UI behavior and edge cases. [show-me-ui-design.html](show-me-ui-design.html) is the visual reference for UI changes.
