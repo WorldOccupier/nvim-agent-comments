@@ -4,7 +4,7 @@ A Neovim plugin for leaving short, project-local comments that coding agents can
 
 ## Current status
 
-The UI contract for the first version is recorded in [DESIGN.md](DESIGN.md). The core comment workflow is implemented.
+The UI contract for the first version is recorded in [DESIGN.md](DESIGN.md). The core comment workflow and agent retrieval command are implemented.
 
 ## UI contract summary
 
@@ -20,3 +20,32 @@ The UI contract for the first version is recorded in [DESIGN.md](DESIGN.md). The
 - Keymaps are opt-in. Commands are the stable interface.
 
 See [DESIGN.md](DESIGN.md) for the complete behavior, commands, and edge cases. See [CONTRACT.md](CONTRACT.md) for the JSON schema, root rules, command API, and retrieval output. Use [show-me-ui-design.html](show-me-ui-design.html) as the visual source of truth when implementing or changing the UI. Open it with `open show-me-ui-design.html`.
+
+## Agent retrieval
+
+Retrieve every comment in the current file's project:
+
+```vim
+:NvimAgentCommentsRetrieve
+```
+
+Filter by a project-relative path:
+
+```vim
+:NvimAgentCommentsRetrieve lua/example.lua
+```
+
+The command writes one JSON object to stdout. Each record keeps its original range and includes `resolved_start_line` and `resolved_end_line` when its context has one match. Missing files and missing or ambiguous context produce a `stale` record.
+
+For headless use, open any file in the project so the plugin can find the Git worktree root:
+
+```sh
+nvim --headless -u NONE \
+  "+set rtp+=/path/to/nvim-agent-comments" \
+  "+lua require('nvim-agent-comments').setup()" \
+  /work/project/README.md \
+  "+NvimAgentCommentsRetrieve" \
+  "+qa!"
+```
+
+Invalid stores, roots, and path filters make Neovim exit with a nonzero status. Retrieval prints no progress messages.

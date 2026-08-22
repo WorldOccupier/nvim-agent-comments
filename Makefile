@@ -1,16 +1,19 @@
-.PHONY: test test-anchors test-storage test-commands
+.PHONY: test test-anchors test-storage test-retrieval test-commands
 
 NVIM ?= nvim
 
 TEST_FLAGS := --headless -u NONE
 
-test: test-anchors test-storage test-commands
+test: test-anchors test-storage test-retrieval test-commands
 
 test-anchors:
 	@$(NVIM) $(TEST_FLAGS) -l tests/anchors.lua
 
 test-storage:
 	@$(NVIM) $(TEST_FLAGS) -l tests/run.lua
+
+test-retrieval:
+	@$(NVIM) $(TEST_FLAGS) -l tests/retrieval.lua
 
 test-commands:
 	@$(NVIM) $(TEST_FLAGS) \
@@ -22,4 +25,5 @@ test-commands:
 		-c 'lua assert(vim.fn.exists(":NvimAgentCommentsDelete") == 2)' \
 		-c 'lua assert(vim.fn.exists(":NvimAgentCommentsJump") == 2)' \
 		-c 'lua assert(vim.fn.exists(":NvimAgentCommentsReanchor") == 2)' \
+		-c 'lua assert(vim.fn.exists(":NvimAgentCommentsRetrieve") == 2)' \
 		-c 'qa!'

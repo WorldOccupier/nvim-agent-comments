@@ -1,6 +1,7 @@
 local M = {}
 
 local anchors = require('nvim-agent-comments.anchors')
+local cli = require('nvim-agent-comments.cli')
 local editor = require('nvim-agent-comments.editor')
 local root = require('nvim-agent-comments.root')
 local store = require('nvim-agent-comments.store')
@@ -222,6 +223,10 @@ function M.setup(opts)
   vim.api.nvim_create_user_command('NvimAgentCommentsReanchor', function(args)
     M.reanchor(tonumber(args.line1), tonumber(args.line2), 0)
   end, { range = true, force = true })
+  vim.api.nvim_create_user_command('NvimAgentCommentsRetrieve', function(args)
+    local ok, err = cli.run({ bufnr = 0, path = args.args, store_name = M.config.store_name })
+    if not ok then error(err) end
+  end, { nargs = '?', complete = 'file', force = true })
   vim.api.nvim_create_user_command('NvimAgentCommentsAddVisual', function(args)
     M.add(tonumber(args.line1), tonumber(args.line2))
   end, { range = true, force = true })
