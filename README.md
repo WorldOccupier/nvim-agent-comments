@@ -1,25 +1,79 @@
 # nvim-agent-comments
 
-A Neovim plugin for leaving short, project-local comments that coding agents can retrieve.
+Leave short, project-local comments in Neovim and retrieve them as JSON from a coding agent or shell script.
 
-## Current status
+Comments live in `.nvim-agent-comments.json` at the Git repository or worktree root. The plugin ignores this file by default and never writes comment text into source buffers.
 
-The UI contract for the first version is recorded in [DESIGN.md](DESIGN.md). The core comment workflow and agent retrieval command are implemented.
+## Requirements
 
-## UI contract summary
+- Neovim 0.9 or newer
+- Git repository or worktree
 
-- Comments target the current line or a visual line range.
-- Adding a comment opens a full-width inline editor directly below the target.
-- Saved comments remain visible as full-width inline boxes below their resolved anchors, with a close/delete control.
-- The source buffer is never modified by the comment UI.
-- v1 accepts one-line text through `vim.ui.input`.
-- Submit saves the comment and keeps its inline box visible. Cancel or empty input does not write anything.
-- Optional signcolumn markers identify saved and stale comments.
-- There is no project-wide list UI in v1.
-- Commands are available for add, edit, delete, jump, and re-anchor.
-- Keymaps are opt-in. Commands are the stable interface.
+## Installation
 
-See [DESIGN.md](DESIGN.md) for the complete behavior, commands, and edge cases. See [CONTRACT.md](CONTRACT.md) for the JSON schema, root rules, command API, and retrieval output. Use [show-me-ui-design.html](show-me-ui-design.html) as the visual source of truth when implementing or changing the UI. Open it with `open show-me-ui-design.html`.
+With lazy.nvim:
+
+```lua
+{
+  'WorldOccupier/nvim-comments',
+  config = function()
+    require('nvim-agent-comments').setup()
+  end,
+}
+```
+
+With packer.nvim:
+
+```lua
+use {
+  'WorldOccupier/nvim-comments',
+  config = function()
+    require('nvim-agent-comments').setup()
+  end,
+}
+```
+
+The plugin registers its commands automatically. Call `setup()` to change options or add mappings.
+
+## Setup
+
+```lua
+require('nvim-agent-comments').setup({
+  signs = true,
+  store_name = '.nvim-agent-comments.json',
+  context_lines = 2,
+  keymaps = {
+    n = {
+      ['<leader>ca'] = '<cmd>NvimAgentCommentsAdd<cr>',
+      ['<leader>ce'] = '<cmd>NvimAgentCommentsEdit<cr>',
+      ['<leader>cd'] = '<cmd>NvimAgentCommentsDelete<cr>',
+      ['<leader>cj'] = '<cmd>NvimAgentCommentsJump<cr>',
+    },
+    x = {
+      ['<leader>ca'] = ':NvimAgentCommentsAddVisual<cr>',
+      ['<leader>cr'] = ':NvimAgentCommentsReanchor<cr>',
+    },
+  },
+})
+```
+
+`keymaps` defaults to `false`. The plugin does not create global mappings unless you provide this table. `context_lines` defaults to `2`, and `signs` defaults to `true`.
+
+## Commands
+
+| Command | Action |
+| --- | --- |
+| `:NvimAgentCommentsAdd` | Add a comment to the current line |
+| `:NvimAgentCommentsAddVisual` | Add a comment to the selected line range |
+| `:NvimAgentCommentsEdit` | Edit a comment on the current line |
+| `:NvimAgentCommentsDelete` | Delete a comment on the current line |
+| `:NvimAgentCommentsJump` | Jump to a comment anchor |
+| `:NvimAgentCommentsReanchor` | Attach a stale comment to the current line or range |
+| `:NvimAgentCommentsRetrieve [path]` | Write project comments as JSON, optionally filtered by path |
+
+Adding or editing opens a one-line floating editor. Press `<CR>` to submit or `<Esc>` to cancel. Saved comments render below their resolved ranges with virtual lines, so source text stays unchanged.
+
+If stored context has no unique match, the plugin marks the comment stale instead of moving it to a guessed location.
 
 ## Agent retrieval
 
@@ -35,13 +89,13 @@ Filter by a project-relative path:
 :NvimAgentCommentsRetrieve lua/example.lua
 ```
 
-The command writes one JSON object to stdout. Each record keeps its original range and includes `resolved_start_line` and `resolved_end_line` when its context has one match. Missing files and missing or ambiguous context produce a `stale` record.
+The command writes one JSON object to stdout. Resolved records include `resolved_start_line` and `resolved_end_line`. Missing files and missing or ambiguous context produce a `stale` record.
 
-For headless use, open any file in the project so the plugin can find the Git worktree root:
+For headless use, open any file in the project so the plugin can find its root:
 
 ```sh
 nvim --headless -u NONE \
-  "+set rtp+=/path/to/nvim-agent-comments" \
+  "+set rtp+=/path/to/nvim-comments" \
   "+lua require('nvim-agent-comments').setup()" \
   /work/project/README.md \
   "+NvimAgentCommentsRetrieve" \
@@ -49,3 +103,25 @@ nvim --headless -u NONE \
 ```
 
 Invalid stores, roots, and path filters make Neovim exit with a nonzero status. Retrieval prints no progress messages.
+
+## Storage and sharing
+
+The first saved comment creates `.nvim-agent-comments.json` in the nearest Git repository or worktree root. The bundled `.gitignore` rule keeps comments local.
+
+To share comments, remove this line from your project's `.gitignore` and commit the store:
+
+```gitignore
+.nvim-agent-comments.json
+```
+
+The file uses a versioned JSON schema. See [CONTRACT.md](CONTRACT.md) for fields, root rules, safe-write behavior, and retrieval output.
+
+## Development
+
+Run the headless test suite with:
+
+```sh
+make test
+```
+
+[DESIGN.md](DESIGN.md) records the UI behavior and edge cases. [show-me-ui-design.html](show-me-ui-design.html) is the visual reference for UI changes.

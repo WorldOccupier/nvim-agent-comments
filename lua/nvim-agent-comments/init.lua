@@ -191,18 +191,17 @@ function M.delete_at(bufnr)
   end
   if #candidates == 0 then return vim.notify('no comment on the current line', vim.log.levels.INFO) end
 
-  local function remove(candidate)
-    table.remove(comments.comments, candidate.index)
-    local ok, err = store.save(path, comments)
-    if not ok then return vim.notify(err, vim.log.levels.ERROR) end
-    M.render(bufnr)
+  local function confirm_remove(candidate)
+    vim.ui.select({ 'Delete', 'Cancel' }, { prompt = 'Delete comment?' }, function(choice)
+      if choice ~= 'Delete' then return end
+      table.remove(comments.comments, candidate.index)
+      local ok, err = store.save(path, comments)
+      if not ok then return vim.notify(err, vim.log.levels.ERROR) end
+      M.render(bufnr)
+    end)
   end
-  if #candidates == 1 then return remove(candidates[1]) end
-  vim.ui.select(candidates, {
-    prompt = 'Delete comment',
-    format_item = function(item) return item.comment.body end,
-  }, function(item)
-    if item then remove(item) end
+  choose_candidate(candidates, 'Delete comment', function(candidate)
+    if candidate then confirm_remove(candidate) end
   end)
 end
 
@@ -230,7 +229,9 @@ function M.setup(opts)
   vim.api.nvim_create_user_command('NvimAgentCommentsAddVisual', function(args)
     M.add(tonumber(args.line1), tonumber(args.line2))
   end, { range = true, force = true })
+  local group = vim.api.nvim_create_augroup('NvimAgentComments', { clear = true })
   vim.api.nvim_create_autocmd({ 'BufEnter', 'BufWritePost', 'TextChanged', 'TextChangedI' }, {
+    group = group,
     callback = function(args) M.render(args.buf) end,
   })
   if type(M.config.keymaps) == 'table' then
