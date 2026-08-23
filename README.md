@@ -46,16 +46,16 @@ require('nvim-agent-comments').setup({
   context_lines = 2,
   keymaps = {
     n = {
-      ['<leader>ca'] = '<cmd>NvimAgentCommentsAdd<cr>',
-      ['<leader>ce'] = '<cmd>NvimAgentCommentsEdit<cr>',
-      ['<leader>cd'] = '<cmd>NvimAgentCommentsDelete<cr>',
-      ['<leader>cj'] = '<cmd>NvimAgentCommentsJump<cr>',
-      ['<leader>cr'] = '<cmd>NvimAgentCommentsReanchor<cr>',
-      ['<leader>ct'] = '<cmd>NvimAgentCommentsRetrieve<cr>',
+      ['<leader>aca'] = '<cmd>NvimAgentCommentsAdd<cr>',
+      ['<leader>ace'] = '<cmd>NvimAgentCommentsEdit<cr>',
+      ['<leader>acd'] = '<cmd>NvimAgentCommentsDelete<cr>',
+      ['<leader>acj'] = '<cmd>NvimAgentCommentsJump<cr>',
+      ['<leader>acr'] = '<cmd>NvimAgentCommentsReanchor<cr>',
+      ['<leader>act'] = '<cmd>NvimAgentCommentsRetrieve<cr>',
     },
     x = {
-      ['<leader>ca'] = ':NvimAgentCommentsAddVisual<cr>',
-      ['<leader>cr'] = ':NvimAgentCommentsReanchor<cr>',
+      ['<leader>aca'] = ':NvimAgentCommentsAddVisual<cr>',
+      ['<leader>acr'] = ':NvimAgentCommentsReanchor<cr>',
     },
   },
 })
@@ -63,14 +63,14 @@ require('nvim-agent-comments').setup({
 
 | Shortcut | Mode | Action |
 | --- | --- | --- |
-| `<leader>ca` | Normal | Add a comment to the current line |
-| `<leader>ca` | Visual | Add a comment to the selected lines |
-| `<leader>ce` | Normal | Edit the comment at the current line |
-| `<leader>cd` | Normal | Delete the comment at the current line |
-| `<leader>cj` | Normal | Jump to the comment at the current line |
-| `<leader>cr` | Normal | Re-anchor a stale comment to the current line |
-| `<leader>cr` | Visual | Re-anchor a stale comment to the selected lines |
-| `<leader>ct` | Normal | Retrieve all project comments as JSON |
+| `<leader>aca` | Normal | Add a comment to the current line |
+| `<leader>aca` | Visual | Add a comment to the selected lines |
+| `<leader>ace` | Normal | Edit the comment at the current line |
+| `<leader>acd` | Normal | Delete the comment at the current line |
+| `<leader>acj` | Normal | Jump to the comment at the current line |
+| `<leader>acr` | Normal | Re-anchor a stale comment to the current line |
+| `<leader>acr` | Visual | Re-anchor a stale comment to the selected lines |
+| `<leader>act` | Normal | Retrieve all project comments as JSON |
 
 `keymaps` defaults to `false`. During setup, the plugin creates mappings only when `keymaps` is a table like the example above. Change the left-hand keys if they conflict with your config. `context_lines` defaults to `2`, and `signs` defaults to `true`.
 
