@@ -13,7 +13,8 @@ local target = vim.api.nvim_get_current_buf()
 local display = vim.api.nvim_create_buf(false, true)
 vim.api.nvim_buf_set_lines(display, 0, -1, false, { 'inserted', 'before', 'target', 'after' })
 
-local diffview = require('nvim-agent-comments.diffview'local start_line, end_line = diffview.map_range(display, target, 3, 3, 1)
+local diffview = require('nvim-agent-comments.diffview')
+local start_line, end_line = diffview.map_range(display, target, 3, 3, 1)
 check(start_line == 2 and end_line == 2, 'unique context did not map into the actual buffer')
 
 vim.api.nvim_buf_set_lines(target, 0, -1, false, { 'before', 'target', 'after', 'before', 'target', 'after' })
