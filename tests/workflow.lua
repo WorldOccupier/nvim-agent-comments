@@ -1,6 +1,6 @@
 vim.opt.rtp:prepend(vim.fn.getcwd())
 
-local responses = { 'Initial comment', 'Edited comment', 'Range comment' }
+local responses = { 'Initial comment', 'Edited comment', 'Range comment', 'Diff comment' }
 package.loaded['nvim-agent-comments.editor'] = {
   open = function(_, on_submit)
     on_submit(table.remove(responses, 1))
@@ -81,6 +81,26 @@ vim.api.nvim_win_set_cursor(0, { 2, 0 })
 comments.delete_at(0)
 saved = assert(store.load(store_path))
 check(#saved.comments == 0, 'range comment could not be deleted from an interior line')
+
+local display = vim.api.nvim_create_buf(false, true)
+vim.api.nvim_buf_set_lines(display, 0, -1, false, { 'replacement', 'new target', 'tail', 'diff-only' })
+local RevType = { LOCAL = 1, COMMIT = 2, STAGE = 3 }
+package.loaded['diffview.vcs.rev'] = { RevType = RevType }
+package.loaded['diffview.lib'] = {
+  get_current_view = function()
+    return { cur_layout = { windows = { {
+      file = { bufnr = display, absolute_path = assert((vim.uv or vim.loop).fs_realpath(source)), rev = { type = RevType.LOCAL } },
+    } } } }
+  end,
+}
+comments.add(2, 2, display)
+saved = assert(store.load(store_path))
+check(saved.comments[1].path == 'example.lua', 'Diffview comment did not use the actual file path')
+check(saved.comments[1].body == 'Diff comment', 'Diffview comment saved the wrong body')
+check(#vim.api.nvim_buf_get_extmarks(0, -1, 0, -1, {}) > 0, 'actual buffer did not render Diffview comment')
+check(#vim.api.nvim_buf_get_extmarks(display, -1, 0, -1, {}) > 0, 'Diffview buffer did not render comment')
+package.loaded['diffview.lib'] = nil
+package.loaded['diffview.vcs.rev'] = nil
 
 vim.fn.delete(directory, 'rf')
 print('nvim-agent-comments workflow tests passed')

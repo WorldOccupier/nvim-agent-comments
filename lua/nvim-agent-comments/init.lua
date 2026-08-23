@@ -2,6 +2,7 @@ local M = {}
 
 local anchors = require('nvim-agent-comments.anchors')
 local cli = require('nvim-agent-comments.cli')
+local diffview = require('nvim-agent-comments.diffview')
 local editor = require('nvim-agent-comments.editor')
 local picker = require('nvim-agent-comments.picker')
 local root = require('nvim-agent-comments.root')
@@ -123,13 +124,14 @@ end
 function M.render(bufnr)
   bufnr = bufnr or 0
   vim.api.nvim_buf_clear_namespace(bufnr, NAMESPACE, 0, -1)
-  local project_root, path = project(bufnr)
+  local source = diffview.resolve(bufnr)
+  if not source then return end
+  local project_root, path = project(source.target_bufnr)
   if not project_root then return end
   local comments = store.load(path)
   if not comments then return end
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
-  local filename = vim.api.nvim_buf_get_name(bufnr)
-  local relative = root.relative(project_root, filename)
+  local relative = root.relative(project_root, source.filename)
   if not relative then return end
 
   for _, comment in ipairs(comments.comments) do
@@ -199,23 +201,33 @@ end
 
 function M.add(start_line, end_line, bufnr)
   bufnr = bufnr or 0
-  if vim.bo[bufnr].readonly then return vim.notify('buffer is readonly', vim.log.levels.ERROR) end
-  local project_root, path = project(bufnr)
+  local source, source_err = diffview.resolve(bufnr, start_line, end_line, M.config.context_lines)
+  if not source then return vim.notify(source_err, vim.log.levels.ERROR) end
+  if vim.bo[source.target_bufnr].readonly then return vim.notify('buffer is readonly', vim.log.levels.ERROR) end
+  local project_root, path = project(source.target_bufnr)
   if not project_root then return vim.notify(path, vim.log.levels.ERROR) end
   editor.open({ bufnr = bufnr, end_line = end_line, title = ('Comment lines %d-%d'):format(start_line, end_line) }, function(body)
-    local current_lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
-    local current = anchors.capture(current_lines, start_line, end_line, M.config.context_lines)
+    if not vim.api.nvim_buf_is_valid(bufnr) or not vim.api.nvim_buf_is_valid(source.target_bufnr) then
+      return vim.notify('comment target closed before submission', vim.log.levels.ERROR)
+    end
+    local mapped_start, mapped_end, map_err = diffview.map_range(
+      bufnr, source.target_bufnr, start_line, end_line, M.config.context_lines
+    )
+    if not mapped_start then return vim.notify(map_err, vim.log.levels.ERROR) end
+    local current_lines = vim.api.nvim_buf_get_lines(source.target_bufnr, 0, -1, false)
+    local current = anchors.capture(current_lines, mapped_start, mapped_end, M.config.context_lines)
     local comments = assert(store.load(path))
     local now = store.timestamp()
     comments.comments[#comments.comments + 1] = {
-      id = store.new_id(comments), path = assert(root.relative(project_root, vim.api.nvim_buf_get_name(bufnr))),
-      start_line = start_line, end_line = end_line, context = current.context,
+      id = store.new_id(comments), path = assert(root.relative(project_root, source.filename)),
+      start_line = mapped_start, end_line = mapped_end, context = current.context,
       context_start_offset = current.context_start_offset, body = body,
       created_at = now, updated_at = now, status = 'resolved',
     }
     local ok, err = store.save(path, comments)
     if not ok then return vim.notify(err, vim.log.levels.ERROR) end
-    M.render(bufnr)
+    M.render(source.target_bufnr)
+    if bufnr ~= source.target_bufnr and vim.api.nvim_buf_is_valid(bufnr) then M.render(bufnr) end
   end)
 end
 

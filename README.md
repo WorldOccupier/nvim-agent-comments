@@ -95,6 +95,14 @@ Range comments show `┌`, `│`, and `└` signs beside every line they cover, 
 
 If stored context has no unique match, the plugin marks the comment stale instead of moving it to a guessed location.
 
+## Diffview.nvim
+
+The add commands also work in the working-tree pane opened by `:DiffviewOpen`, including setups that map it to `<leader>dv`. The plugin does not define or replace that mapping.
+
+Comments created there use the real project-relative file path and render in the Diffview pane. Diffview uses the loaded working-tree buffer for that pane, so the same virtual comment remains visible when the file opens outside Diffview. Unsaved file-buffer content is the source of truth.
+
+Commit, index, deleted-file, and synthetic Diffview panels reject add attempts. If changed buffer content prevents one exact range match, the plugin reports an error instead of attaching the comment to a guessed line.
+
 ## Agent retrieval
 
 Retrieve every comment in the current file's project:
