@@ -3,6 +3,7 @@ local M = {}
 local anchors = require('nvim-agent-comments.anchors')
 local cli = require('nvim-agent-comments.cli')
 local editor = require('nvim-agent-comments.editor')
+local picker = require('nvim-agent-comments.picker')
 local root = require('nvim-agent-comments.root')
 local store = require('nvim-agent-comments.store')
 
@@ -31,6 +32,65 @@ local function project(bufnr)
   local path, path_err = root.store_path(project_root, M.config.store_name)
   if not path then return nil, path_err end
   return project_root, path
+end
+
+local function project_comment_lines(project_root, relative)
+  local filename = project_root .. '/' .. relative
+  local bufnr = vim.fn.bufnr(filename)
+  if bufnr ~= -1 and vim.api.nvim_buf_is_loaded(bufnr) then
+    return vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+  end
+  if not (vim.uv or vim.loop).fs_stat(filename) then return nil end
+  local ok, lines = pcall(vim.fn.readfile, filename)
+  return ok and lines or nil
+end
+
+local function project_comments(bufnr)
+  local project_root, path = project(bufnr)
+  if not project_root then return nil, path end
+  local comments, load_err = store.load(path)
+  if not comments then return nil, load_err end
+
+  local entries = {}
+  for index, comment in ipairs(comments.comments) do
+    local lines = project_comment_lines(project_root, comment.path)
+    local resolved = lines and anchors.resolve(lines, comment) or { status = 'stale' }
+    local line = resolved.start_line or comment.start_line
+    local end_line = resolved.end_line or comment.end_line
+    local context = {}
+    for source_line = line, end_line do
+      local text
+      if resolved.status == 'resolved' then
+        text = lines[source_line]
+      else
+        local offset = (comment.context_start_offset or 0) + source_line - line + 1
+        text = comment.context[offset]
+      end
+      context[#context + 1] = { line = source_line, text = text or '' }
+    end
+    entries[#entries + 1] = {
+      comment = comment,
+      context = context,
+      end_line = end_line,
+      index = index,
+      line = line,
+      path = comment.path,
+      status = resolved.status,
+      text = ('%s:%d%s %s'):format(
+        comment.path,
+        line,
+        resolved.status == 'stale' and ' [stale]' or '',
+        comment.body
+      ),
+    }
+  end
+  table.sort(entries, function(left, right)
+    if left.path ~= right.path then return left.path < right.path end
+    if left.line ~= right.line then return left.line < right.line end
+    return left.index < right.index
+  end)
+  if #entries == 0 then vim.notify('no project comments', vim.log.levels.INFO) end
+  return entries, nil, project_root
 end
 
 local function truncate_display(text, width)
@@ -102,6 +162,39 @@ function M.render(bufnr)
       end
     end
   end
+end
+
+function M.list(bufnr)
+  bufnr = bufnr or 0
+  local entries, err, project_root = project_comments(bufnr)
+  if not entries then return vim.notify(err, vim.log.levels.ERROR) end
+  if #entries == 0 then return end
+
+  picker.open(entries, function(item)
+    if not item then return end
+    local filename = project_root .. '/' .. item.path
+    if not (vim.uv or vim.loop).fs_stat(filename) then
+      return vim.notify('comment file no longer exists: ' .. item.path, vim.log.levels.ERROR)
+    end
+
+    local target = vim.fn.bufnr(filename)
+    local ok, open_err
+    if target ~= -1 then
+      ok, open_err = pcall(vim.api.nvim_win_set_buf, 0, target)
+    else
+      ok, open_err = pcall(vim.cmd.edit, vim.fn.fnameescape(filename))
+    end
+    if not ok then return vim.notify(tostring(open_err), vim.log.levels.ERROR) end
+
+    local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+    local resolved = anchors.resolve(lines, item.comment)
+    local line = math.max(1, math.min(#lines, resolved.start_line or item.comment.start_line))
+    vim.api.nvim_win_set_cursor(0, { line, 0 })
+    vim.cmd.normal({ args = { 'zz' }, bang = true })
+    if resolved.status == 'stale' then
+      vim.notify('comment anchor is stale; use :NvimAgentCommentsReanchor', vim.log.levels.WARN)
+    end
+  end)
 end
 
 function M.add(start_line, end_line, bufnr)
@@ -241,11 +334,14 @@ function M.setup(opts)
   vim.api.nvim_set_hl(0, 'CommentBoxHint', { fg = '#8b949e', bg = '#111820' })
   vim.api.nvim_set_hl(0, 'CommentBoxSaved', { fg = '#3fb950', bg = '#0b0f14', bold = true })
   vim.api.nvim_set_hl(0, 'CommentBoxStale', { fg = '#f85149', bg = '#0b0f14', bold = true })
+  vim.api.nvim_set_hl(0, 'CommentPicker', { fg = '#e6edf3', bg = '#111820' })
+  vim.api.nvim_set_hl(0, 'CommentPickerSelected', { fg = '#e6edf3', bg = '#17263a' })
   M.config = vim.tbl_deep_extend('force', M.config, opts or {})
   vim.api.nvim_create_user_command('NvimAgentCommentsAdd', function() M.add(vim.fn.line('.'), vim.fn.line('.')) end, { force = true })
   vim.api.nvim_create_user_command('NvimAgentCommentsDelete', function() M.delete_at(0) end, { force = true })
   vim.api.nvim_create_user_command('NvimAgentCommentsEdit', function() M.edit_at(0) end, { force = true })
   vim.api.nvim_create_user_command('NvimAgentCommentsJump', function() M.jump_at(0) end, { force = true })
+  vim.api.nvim_create_user_command('NvimAgentCommentsList', function() M.list(0) end, { force = true })
   vim.api.nvim_create_user_command('NvimAgentCommentsReanchor', function(args)
     M.reanchor(tonumber(args.line1), tonumber(args.line2), 0)
   end, { range = true, force = true })

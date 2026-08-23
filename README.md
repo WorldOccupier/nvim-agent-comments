@@ -50,6 +50,7 @@ require('nvim-agent-comments').setup({
       ['<leader>ace'] = '<cmd>NvimAgentCommentsEdit<cr>',
       ['<leader>acd'] = '<cmd>NvimAgentCommentsDelete<cr>',
       ['<leader>acj'] = '<cmd>NvimAgentCommentsJump<cr>',
+      ['<leader>acl'] = '<cmd>NvimAgentCommentsList<cr>',
       ['<leader>acr'] = '<cmd>NvimAgentCommentsReanchor<cr>',
       ['<leader>act'] = '<cmd>NvimAgentCommentsRetrieve<cr>',
     },
@@ -68,6 +69,7 @@ require('nvim-agent-comments').setup({
 | `<leader>ace` | Normal | Edit the comment at the current line |
 | `<leader>acd` | Normal | Delete the comment at the current line |
 | `<leader>acj` | Normal | Jump to the comment at the current line |
+| `<leader>acl` | Normal | List all project comments and jump to one |
 | `<leader>acr` | Normal | Re-anchor a stale comment to the current line |
 | `<leader>acr` | Visual | Re-anchor a stale comment to the selected lines |
 | `<leader>act` | Normal | Retrieve all project comments as JSON |
@@ -83,6 +85,7 @@ require('nvim-agent-comments').setup({
 | `:NvimAgentCommentsEdit` | Edit a comment on the current line |
 | `:NvimAgentCommentsDelete` | Delete a comment on the current line |
 | `:NvimAgentCommentsJump` | Jump to a comment anchor |
+| `:NvimAgentCommentsList` | List all project comments and jump to one |
 | `:NvimAgentCommentsReanchor` | Attach a stale comment to the current line or range |
 | `:NvimAgentCommentsRetrieve [path]` | Write project comments as JSON, optionally filtered by path |
 
