@@ -14,6 +14,7 @@ vim.ui.select = function(items, _, callback)
 end
 
 local comments = require('nvim-agent-comments')
+local anchors = require('nvim-agent-comments.anchors')
 local cli = require('nvim-agent-comments.cli')
 local store = require('nvim-agent-comments.store')
 
@@ -38,6 +39,22 @@ check(saved.comments[1].body == 'Initial comment', 'add saved the wrong body')
 comments.edit_at(0)
 saved = assert(store.load(store_path))
 check(saved.comments[1].body == 'Edited comment', 'edit did not update the body')
+
+local second = vim.deepcopy(saved.comments[1])
+local captured = anchors.capture({ 'before', 'target', 'after' }, 3, 3, 1)
+second.id, second.start_line, second.end_line = 'c_navigation', 3, 3
+second.context, second.context_start_offset = captured.context, captured.context_start_offset
+saved.comments[2] = second
+assert(store.save(store_path, saved))
+vim.api.nvim_win_set_cursor(0, { 2, 0 })
+comments.navigate(1, 0)
+check(vim.fn.line('.') == 3, ']q did not move to the next comment')
+comments.navigate(1, 0)
+check(vim.fn.line('.') == 2, ']q did not wrap to the first comment')
+comments.navigate(-1, 0)
+check(vim.fn.line('.') == 3, '[q did not wrap to the last comment')
+table.remove(saved.comments, 2)
+assert(store.save(store_path, saved))
 
 vim.api.nvim_buf_set_lines(0, 0, 0, false, { 'inserted' })
 vim.cmd('write')

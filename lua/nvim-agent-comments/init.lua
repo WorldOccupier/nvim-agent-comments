@@ -23,6 +23,7 @@ local BOX_BORDER = '─'
 M.config = {
   signs = true,
   keymaps = false,
+  navigation = true,
   store_name = DEFAULT_STORE_NAME,
   context_lines = DEFAULT_CONTEXT_LINES,
 }
@@ -284,6 +285,37 @@ function M.jump_at(bufnr)
   end)
 end
 
+function M.navigate(direction, bufnr)
+  bufnr = bufnr or 0
+  local project_root, path = project(bufnr)
+  if not project_root then return vim.notify(path, vim.log.levels.ERROR) end
+  local relative = root.relative(project_root, vim.api.nvim_buf_get_name(bufnr))
+  local comments = store.load(path)
+  if not comments or not relative then return end
+  local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+  local anchors_in_file = {}
+  for _, comment in ipairs(comments.comments) do
+    if comment.path == relative then
+      local resolved = anchors.resolve(lines, comment)
+      anchors_in_file[#anchors_in_file + 1] = resolved.start_line or comment.start_line
+    end
+  end
+  if #anchors_in_file == 0 then return vim.notify('no comments in the current file', vim.log.levels.INFO) end
+  table.sort(anchors_in_file)
+  local cursor_line = vim.api.nvim_win_get_cursor(0)[1]
+  local target = direction > 0 and anchors_in_file[1] or anchors_in_file[#anchors_in_file]
+  if direction > 0 then
+    for _, line in ipairs(anchors_in_file) do
+      if line > cursor_line then target = line break end
+    end
+  else
+    for index = #anchors_in_file, 1, -1 do
+      if anchors_in_file[index] < cursor_line then target = anchors_in_file[index] break end
+    end
+  end
+  vim.api.nvim_win_set_cursor(0, { math.max(1, math.min(#lines, target)), 0 })
+end
+
 function M.reanchor(start_line, end_line, bufnr)
   bufnr = bufnr or 0
   local candidates, err, comments, path = candidates_at(bufnr)
@@ -354,6 +386,8 @@ function M.setup(opts)
   vim.api.nvim_create_user_command('NvimAgentCommentsEdit', function() M.edit_at(0) end, { force = true })
   vim.api.nvim_create_user_command('NvimAgentCommentsJump', function() M.jump_at(0) end, { force = true })
   vim.api.nvim_create_user_command('NvimAgentCommentsList', function() M.list(0) end, { force = true })
+  vim.api.nvim_create_user_command('NvimAgentCommentsNext', function() M.navigate(1, 0) end, { force = true })
+  vim.api.nvim_create_user_command('NvimAgentCommentsPrev', function() M.navigate(-1, 0) end, { force = true })
   vim.api.nvim_create_user_command('NvimAgentCommentsReanchor', function(args)
     M.reanchor(tonumber(args.line1), tonumber(args.line2), 0)
   end, { range = true, force = true })
@@ -369,6 +403,10 @@ function M.setup(opts)
     group = group,
     callback = function(args) M.render(args.buf) end,
   })
+  if M.config.navigation then
+    vim.keymap.set('n', ']q', function() M.navigate(1, 0) end, { desc = 'Next agent comment' })
+    vim.keymap.set('n', '[q', function() M.navigate(-1, 0) end, { desc = 'Previous agent comment' })
+  end
   if type(M.config.keymaps) == 'table' then
     for mode, mappings in pairs(M.config.keymaps) do
       for lhs, rhs in pairs(mappings) do vim.keymap.set(mode, lhs, rhs, { desc = 'nvim-agent-comments' }) end

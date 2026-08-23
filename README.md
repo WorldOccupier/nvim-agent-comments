@@ -42,6 +42,7 @@ Copy this block into your Neovim config. It maps every plugin command:
 ```lua
 require('nvim-agent-comments').setup({
   signs = true,
+  navigation = true,
   store_name = '.nvim-agent-comments.json',
   context_lines = 2,
   keymaps = {
@@ -73,8 +74,10 @@ require('nvim-agent-comments').setup({
 | `<leader>acr` | Normal | Re-anchor a stale comment to the current line |
 | `<leader>acr` | Visual | Re-anchor a stale comment to the selected lines |
 | `<leader>act` | Normal | Retrieve all project comments as JSON |
+| `]q` | Normal | Move to the next comment, wrapping at the end |
+| `[q` | Normal | Move to the previous comment, wrapping at the start |
 
-`keymaps` defaults to `false`. During setup, the plugin creates mappings only when `keymaps` is a table like the example above. Change the left-hand keys if they conflict with your config. `context_lines` defaults to `2`, and `signs` defaults to `true`.
+`keymaps` defaults to `false`. During setup, the plugin creates custom mappings only when `keymaps` is a table like the example above. Comment navigation uses `[q` and `]q` by default; set `navigation = false` to leave those keys unchanged. `context_lines` defaults to `2`, and `signs` defaults to `true`.
 
 ## Commands
 
@@ -86,6 +89,8 @@ require('nvim-agent-comments').setup({
 | `:NvimAgentCommentsDelete` | Delete a comment on the current line |
 | `:NvimAgentCommentsJump` | Jump to a comment anchor |
 | `:NvimAgentCommentsList` | List all project comments and jump to one |
+| `:NvimAgentCommentsNext` | Move to the next comment, wrapping at the end |
+| `:NvimAgentCommentsPrev` | Move to the previous comment, wrapping at the start |
 | `:NvimAgentCommentsReanchor` | Attach a stale comment to the current line or range |
 | `:NvimAgentCommentsRetrieve [path]` | Write project comments as JSON, optionally filtered by path |
 

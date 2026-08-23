@@ -25,14 +25,4 @@ test-workflow:
 	@$(NVIM) $(TEST_FLAGS) -l tests/workflow.lua
 
 test-commands:
-	@$(NVIM) $(TEST_FLAGS) \
-		-c 'set rtp^=.' \
-		-c 'lua require("nvim-agent-comments").setup()' \
-		-c 'lua assert(vim.fn.exists(":NvimAgentCommentsAdd") == 2)' \
-		-c 'lua assert(vim.fn.exists(":NvimAgentCommentsAddVisual") == 2)' \
-		-c 'lua assert(vim.fn.exists(":NvimAgentCommentsEdit") == 2)' \
-		-c 'lua assert(vim.fn.exists(":NvimAgentCommentsDelete") == 2)' \
-		-c 'lua assert(vim.fn.exists(":NvimAgentCommentsJump") == 2)' \
-		-c 'lua assert(vim.fn.exists(":NvimAgentCommentsReanchor") == 2)' \
-		-c 'lua assert(vim.fn.exists(":NvimAgentCommentsRetrieve") == 2)' \
-		-c 'qa!'
+	@$(NVIM) $(TEST_FLAGS) -l tests/commands.lua
