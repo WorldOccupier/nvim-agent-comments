@@ -12,6 +12,7 @@ for _, command in ipairs({
   'NvimAgentCommentsPrev',
   'NvimAgentCommentsReanchor',
   'NvimAgentCommentsRetrieve',
+  'NvimAgentCommentsSearch',
 }) do
   assert(vim.fn.exists(':' .. command) == 2, command .. ' was not registered')
 end

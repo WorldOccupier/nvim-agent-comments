@@ -167,13 +167,13 @@ function M.render(bufnr)
   end
 end
 
-function M.list(bufnr)
+local function open_project_picker(bufnr, open_picker, jump_to_end)
   bufnr = bufnr or 0
   local entries, err, project_root = project_comments(bufnr)
   if not entries then return vim.notify(err, vim.log.levels.ERROR) end
   if #entries == 0 then return end
 
-  picker.open(entries, function(item)
+  open_picker(entries, function(item)
     if not item then return end
     local filename = project_root .. '/' .. item.path
     if not (vim.uv or vim.loop).fs_stat(filename) then
@@ -191,13 +191,23 @@ function M.list(bufnr)
 
     local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
     local resolved = anchors.resolve(lines, item.comment)
-    local line = math.max(1, math.min(#lines, resolved.start_line or item.comment.start_line))
+    local target_line = jump_to_end and (resolved.end_line or item.comment.end_line)
+        or (resolved.start_line or item.comment.start_line)
+    local line = math.max(1, math.min(#lines, target_line))
     vim.api.nvim_win_set_cursor(0, { line, 0 })
     vim.cmd.normal({ args = { 'zz' }, bang = true })
     if resolved.status == 'stale' then
       vim.notify('comment anchor is stale; use :NvimAgentCommentsReanchor', vim.log.levels.WARN)
     end
   end)
+end
+
+function M.list(bufnr)
+  open_project_picker(bufnr, picker.open)
+end
+
+function M.search(bufnr)
+  open_project_picker(bufnr, picker.search, true)
 end
 
 function M.add(start_line, end_line, bufnr)
@@ -388,6 +398,7 @@ function M.setup(opts)
   vim.api.nvim_create_user_command('NvimAgentCommentsList', function() M.list(0) end, { force = true })
   vim.api.nvim_create_user_command('NvimAgentCommentsNext', function() M.navigate(1, 0) end, { force = true })
   vim.api.nvim_create_user_command('NvimAgentCommentsPrev', function() M.navigate(-1, 0) end, { force = true })
+  vim.api.nvim_create_user_command('NvimAgentCommentsSearch', function() M.search(0) end, { force = true })
   vim.api.nvim_create_user_command('NvimAgentCommentsReanchor', function(args)
     M.reanchor(tonumber(args.line1), tonumber(args.line2), 0)
   end, { range = true, force = true })

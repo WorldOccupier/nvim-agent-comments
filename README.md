@@ -53,6 +53,7 @@ require('nvim-agent-comments').setup({
       ['<leader>acj'] = '<cmd>NvimAgentCommentsJump<cr>',
       ['<leader>acl'] = '<cmd>NvimAgentCommentsList<cr>',
       ['<leader>acr'] = '<cmd>NvimAgentCommentsReanchor<cr>',
+      ['<leader>acs'] = '<cmd>NvimAgentCommentsSearch<cr>',
       ['<leader>act'] = '<cmd>NvimAgentCommentsRetrieve<cr>',
     },
     x = {
@@ -73,6 +74,7 @@ require('nvim-agent-comments').setup({
 | `<leader>acl` | Normal | List all project comments and jump to one |
 | `<leader>acr` | Normal | Re-anchor a stale comment to the current line |
 | `<leader>acr` | Visual | Re-anchor a stale comment to the selected lines |
+| `<leader>acs` | Normal | Search project comments by path or body |
 | `<leader>act` | Normal | Retrieve all project comments as JSON |
 | `]q` | Normal | Move to the next comment, wrapping at the end |
 | `[q` | Normal | Move to the previous comment, wrapping at the start |
@@ -89,12 +91,15 @@ require('nvim-agent-comments').setup({
 | `:NvimAgentCommentsDelete` | Delete a comment on the current line |
 | `:NvimAgentCommentsJump` | Jump to a comment anchor |
 | `:NvimAgentCommentsList` | List all project comments and jump to one |
+| `:NvimAgentCommentsSearch` | Search project comments by path or body and jump to one |
 | `:NvimAgentCommentsNext` | Move to the next comment, wrapping at the end |
 | `:NvimAgentCommentsPrev` | Move to the previous comment, wrapping at the start |
 | `:NvimAgentCommentsReanchor` | Attach a stale comment to the current line or range |
 | `:NvimAgentCommentsRetrieve [path]` | Write project comments as JSON, optionally filtered by path |
 
 Adding or editing opens a one-line floating editor. Press Enter (`<CR>`) to submit or Escape (`<Esc>`) to cancel. Neovim returns to normal mode when the editor closes. Saved comments render below their resolved ranges with virtual lines, so source text stays unchanged.
+
+Comment search filters as you type. It matches literal text in comment bodies and project-relative paths, without case sensitivity. Use `<C-n>` and `<C-p>` to move through matches, `<CR>` to jump, and `<Esc>` to close.
 
 Range comments show `┌`, `│`, and `└` signs beside every line they cover, and their box title includes the resolved range. Edit, delete, and jump commands work from any line inside that range.
 
