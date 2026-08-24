@@ -154,6 +154,10 @@ To share comments, remove this line from your project's `.gitignore` and commit 
 
 The file uses a versioned JSON schema. See [CONTRACT.md](CONTRACT.md) for fields, root rules, safe-write behavior, and retrieval output.
 
+## Help
+
+Run `:help nvim-agent-comments` inside Neovim for the command and configuration reference.
+
 ## Development
 
 Run the headless test suite with:

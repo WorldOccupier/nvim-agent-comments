@@ -1,0 +1,171 @@
+*nvim-agent-comments.txt*  Project-local comments for coding agents
+
+==============================================================================
+CONTENTS                                              *nvim-agent-comments-contents*
+
+1. Introduction..........................|nvim-agent-comments|
+2. Requirements..........................|nvim-agent-comments-requirements|
+3. Setup.................................|nvim-agent-comments-setup|
+4. Commands..............................|nvim-agent-comments-commands|
+5. Using comments........................|nvim-agent-comments-usage|
+6. Storage and retrieval.................|nvim-agent-comments-storage|
+7. Diffview...............................|nvim-agent-comments-diffview|
+8. Stale comments.........................|nvim-agent-comments-stale|
+
+==============================================================================
+INTRODUCTION                                                *nvim-agent-comments*
+
+nvim-agent-comments attaches short comments to lines or ranges without
+changing the source buffer. It stores comments as JSON at the Git repository
+or worktree root. A coding agent or shell script can read that file or use the
+retrieval command.
+
+Comments render below their source ranges as virtual lines. They move with the
+source when their saved context has one exact match.
+
+==============================================================================
+REQUIREMENTS                                   *nvim-agent-comments-requirements*
+
+- Neovim 0.9 or newer
+- A named file inside a Git repository or worktree
+
+==============================================================================
+SETUP                                                   *nvim-agent-comments-setup*
+
+Call setup() from a plugin manager or Neovim configuration: >lua
+
+    require('nvim-agent-comments').setup()
+<
+The plugin also calls setup() when Neovim loads it. Call setup() yourself to
+change an option: >lua
+
+    require('nvim-agent-comments').setup({
+      signs = true,
+      navigation = true,
+      store_name = '.nvim-agent-comments.json',
+      context_lines = 2,
+      keymaps = {
+        n = {
+          ['<leader>aca'] = '<cmd>NvimAgentCommentsAdd<cr>',
+          ['<leader>acl'] = '<cmd>NvimAgentCommentsList<cr>',
+          ['<leader>act'] = '<cmd>NvimAgentCommentsRetrieve<cr>',
+        },
+        x = {
+          ['<leader>aca'] = ':NvimAgentCommentsAddVisual<cr>',
+        },
+      },
+    })
+<
+                                                        *nvim-agent-comments-options*
+
+signs                  Show signs beside comment ranges. Default: true.
+
+navigation             Map ]q and [q to the next and previous comment in the
+                       current file. Navigation wraps. Default: true.
+
+store_name             Name of the JSON file at the project root. Default:
+                       ".nvim-agent-comments.json".
+
+context_lines          Number of nearby source lines saved with an anchor.
+                       Default: 2.
+
+keymaps                A table of explicit mappings grouped by mode. The
+                       plugin creates no action mappings when this is false.
+                       Default: false.
+
+==============================================================================
+COMMANDS                                             *nvim-agent-comments-commands*
+
+:NvimAgentCommentsAdd                     Add a comment to the current line.
+
+:'<,'>NvimAgentCommentsAddVisual          Add a comment to the selected line
+                                           range.
+
+:NvimAgentCommentsEdit                    Edit a comment whose range contains
+                                           the cursor.
+
+:NvimAgentCommentsDelete                  Delete a comment whose range contains
+                                           the cursor.
+
+:NvimAgentCommentsJump                    Jump to the start of a comment whose
+                                           range contains the cursor.
+
+:NvimAgentCommentsList                    List every project comment and jump
+                                           to the selected item.
+
+:NvimAgentCommentsSearch                  Search comment bodies and project
+                                           paths. Matching ignores case.
+
+:NvimAgentCommentsNext                    Go to the next comment in this file.
+
+:NvimAgentCommentsPrev                    Go to the previous comment in this
+                                           file.
+
+:[range]NvimAgentCommentsReanchor         Attach a stale comment to the current
+                                           line or supplied range.
+
+:NvimAgentCommentsRetrieve [path]         Write project comments as one JSON
+                                           object. A project-relative path
+                                           limits the output to that file.
+
+==============================================================================
+USING COMMENTS                                         *nvim-agent-comments-usage*
+
+Run |:NvimAgentCommentsAdd| on a line, or select lines and run
+|:NvimAgentCommentsAddVisual|. The floating editor accepts one line of text.
+Press <CR> to save or <Esc> to cancel.
+
+Range comments show signs beside every covered line. Edit, delete, and jump
+commands work from any line in the range. If several comments cover the line,
+the plugin asks you to choose one.
+
+The list picker uses <C-n> and <C-p> to move, <CR> to jump, and <Esc> to close.
+The search picker filters as you type and uses the same keys.
+
+==============================================================================
+STORAGE AND RETRIEVAL                               *nvim-agent-comments-storage*
+
+The first saved comment creates `.nvim-agent-comments.json` at the nearest Git
+repository or worktree root. The plugin's bundled `.gitignore` keeps this file
+local by default. Remove that ignore rule and commit the file when you want to
+share comments.
+
+|:NvimAgentCommentsRetrieve| writes one JSON object to standard output.
+Resolved records include `resolved_start_line` and `resolved_end_line`.
+Missing files and anchors without one exact context match are returned as
+stale records.
+
+For headless retrieval, open a project file so the plugin can find the root: >sh
+
+    nvim --headless -u NONE \
+      "+set rtp+=/path/to/nvim-agent-comments" \
+      "+lua require('nvim-agent-comments').setup()" \
+      /work/project/README.md \
+      "+NvimAgentCommentsRetrieve" \
+      "+qa!"
+<
+Invalid stores, roots, and path filters make Neovim exit with a nonzero status.
+
+==============================================================================
+DIFFVIEW                                             *nvim-agent-comments-diffview*
+
+Add commands work in the working-tree pane opened by `:DiffviewOpen`. Comments
+use the real project-relative path and remain visible when that file opens
+outside Diffview.
+
+The plugin rejects comments in commit, index, deleted-file, and synthetic
+panels. It does not define a Diffview keymap.
+
+==============================================================================
+STALE COMMENTS                                         *nvim-agent-comments-stale*
+
+A saved anchor contains the selected source and nearby context. If that context
+has no match or several matches after an edit, the plugin marks the comment
+stale instead of guessing where it belongs.
+
+Move the cursor to the intended line and run
+|:NvimAgentCommentsReanchor|. Select a range first when the comment belongs to
+several lines.
+
+==============================================================================
+vim:tw=78:ts=8:noet:ft=help:norl:
