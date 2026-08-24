@@ -4,6 +4,26 @@ Leave short, project-local comments in Neovim and retrieve them as JSON from a c
 
 Comments live in `.nvim-agent-comments.json` at the Git repository or worktree root. The plugin ignores this file by default and never writes comment text into source buffers.
 
+## How it works
+
+### 1. Add a comment
+
+Place the cursor on a line and run `:NvimAgentCommentsAdd`. To comment on several lines, select them and run `:NvimAgentCommentsAddVisual`. Type the instruction, then press `<CR>` to save it.
+
+![Adding a comment in Neovim](assets/add-comment.png)
+
+### 2. Keep working in the source file
+
+The saved comment appears below its line. It does not change the file contents.
+
+![A saved comment rendered below the source line](assets/rendered-comment.png)
+
+### 3. Ask your coding agent to read the comments
+
+The bundled [`SKILL.md`](SKILL.md) tells coding agents how to find, resolve, and act on comments in `.nvim-agent-comments.json`.
+
+![A coding agent reading a saved Neovim comment](assets/agent-retrieval.png)
+
 ## Requirements
 
 - Neovim 0.9 or newer. The floating comment editor uses window titles introduced in Neovim 0.9.
