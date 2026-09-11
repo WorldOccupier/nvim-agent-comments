@@ -35,7 +35,7 @@ comments.add(2, 2, 0)
 local saved = assert(store.load(store_path))
 check(#saved.comments == 1, 'add did not save a comment')
 check(saved.comments[1].body == 'Initial comment', 'add saved the wrong body')
-check(vim.islist(saved.comments[1].replies) and #saved.comments[1].replies == 0, 'add did not initialize replies')
+check(type(saved.comments[1].replies) == 'table' and #saved.comments[1].replies == 0, 'add did not initialize replies')
 
 comments.edit_at(0)
 saved = assert(store.load(store_path))
