@@ -65,6 +65,20 @@ local function validate_comment(comment, index)
       return fail(('%s.context[%d] must be a string'):format(prefix, context_index))
     end
   end
+  if comment.replies ~= nil then
+    if not is_array(comment.replies) then return fail(prefix .. '.replies must be an array') end
+    for reply_index, reply in ipairs(comment.replies) do
+      local reply_prefix = ('%s.replies[%d]'):format(prefix, reply_index)
+      if type(reply) ~= 'table' then return fail(reply_prefix .. ' must be an object') end
+      if type(reply.body) ~= 'string' or reply.body == EMPTY_STRING then
+        return fail(reply_prefix .. '.body must be a non-empty string')
+      end
+      if reply.created_at ~= nil
+          and (type(reply.created_at) ~= 'string' or reply.created_at == EMPTY_STRING) then
+        return fail(reply_prefix .. '.created_at must be a non-empty string when present')
+      end
+    end
+  end
   if comment.status ~= STATUS_RESOLVED and comment.status ~= STATUS_STALE then
     return fail(prefix .. '.status must be resolved or stale')
   end

@@ -35,10 +35,46 @@ comments.add(2, 2, 0)
 local saved = assert(store.load(store_path))
 check(#saved.comments == 1, 'add did not save a comment')
 check(saved.comments[1].body == 'Initial comment', 'add saved the wrong body')
+check(vim.islist(saved.comments[1].replies) and #saved.comments[1].replies == 0, 'add did not initialize replies')
 
 comments.edit_at(0)
 saved = assert(store.load(store_path))
 check(saved.comments[1].body == 'Edited comment', 'edit did not update the body')
+local agent_response = 'Agent response ' .. string.rep('with enough detail to wrap ', 8)
+saved.comments[1].replies = { { body = agent_response, created_at = store.timestamp() } }
+assert(store.save(store_path, saved))
+local reply_appeared = vim.wait(1000, function()
+  for _, mark in ipairs(vim.api.nvim_buf_get_extmarks(0, -1, 0, -1, { details = true })) do
+    for _, virtual_line in ipairs(mark[4].virt_lines or {}) do
+      for _, chunk in ipairs(virtual_line) do
+        if chunk[1]:find('Agent response', 1, true) then return true end
+      end
+    end
+  end
+  return false
+end, 10)
+check(reply_appeared, 'external store change did not refresh comments automatically')
+local reply_text, reply_highlight, reply_lines, reply_spacing = '', false, 0, false
+for _, mark in ipairs(vim.api.nvim_buf_get_extmarks(0, -1, 0, -1, { details = true })) do
+  local virtual_lines = mark[4].virt_lines or {}
+  if #virtual_lines > 0 then
+    local last = virtual_lines[#virtual_lines]
+    reply_spacing = #last == 1 and last[1][1] == ' '
+  end
+  for _, virtual_line in ipairs(virtual_lines) do
+    for _, chunk in ipairs(virtual_line) do
+      reply_text = reply_text .. chunk[1]
+      if chunk[2] == 'CommentReplyText' then
+        reply_highlight = true
+        reply_lines = reply_lines + 1
+      end
+    end
+  end
+end
+check(reply_text:find('│ ↳ Agent: Agent response', 1, true) ~= nil, 'agent reply did not render below comment')
+check(reply_highlight, 'agent reply did not use its reply highlight')
+check(reply_lines > 1, 'long agent reply did not wrap')
+check(reply_spacing, 'agent reply did not leave spacing below it')
 
 local second = vim.deepcopy(saved.comments[1])
 local captured = anchors.capture({ 'before', 'target', 'after' }, 3, 3, 1)

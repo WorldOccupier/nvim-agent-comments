@@ -20,8 +20,9 @@ changing the source buffer. It stores comments as JSON at the Git repository
 or worktree root. A coding agent or shell script can read that file or use the
 retrieval command.
 
-Comments render below their source ranges as virtual lines. They move with the
-source when their saved context has one exact match.
+Comments render below their source ranges as virtual lines. Agent replies render
+beneath the original comment with green vertical-line styling. Comments move
+with the source when their saved context has one exact match.
 
 ==============================================================================
 REQUIREMENTS                                   *nvim-agent-comments-requirements*
@@ -133,7 +134,9 @@ share comments.
 |:NvimAgentCommentsRetrieve| writes one JSON object to standard output.
 Resolved records include `resolved_start_line` and `resolved_end_line`.
 Missing files and anchors without one exact context match are returned as
-stale records.
+stale records. A comment may include a `replies` array. Each reply has a `body`
+and may include a `created_at` timestamp; the bundled agent skill appends one
+after successfully handling the comment.
 
 For headless retrieval, open a project file so the plugin can find the root: >sh
 

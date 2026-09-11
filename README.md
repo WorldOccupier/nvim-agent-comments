@@ -117,7 +117,7 @@ require('nvim-agent-comments').setup({
 | `:NvimAgentCommentsReanchor` | Attach a stale comment to the current line or range |
 | `:NvimAgentCommentsRetrieve [path]` | Write project comments as JSON, optionally filtered by path |
 
-Adding or editing opens a one-line floating editor. Press Enter (`<CR>`) to submit or Escape (`<Esc>`) to cancel. Neovim returns to normal mode when the editor closes. Saved comments render below their resolved ranges with virtual lines, so source text stays unchanged.
+Adding or editing opens a one-line floating editor. Press Enter (`<CR>`) to submit or Escape (`<Esc>`) to cancel. Neovim returns to normal mode when the editor closes. Saved comments render below their resolved ranges with virtual lines, so source text stays unchanged. Coding agents can append replies to a comment's `replies` array; replies render immediately below the original comment with green vertical-line styling.
 
 Comment search filters as you type. It matches literal text in comment bodies and project-relative paths, without case sensitivity. Use `<C-n>` and `<C-p>` to move through matches, `<CR>` to jump, and `<Esc>` to close.
 
@@ -172,7 +172,7 @@ To share comments, remove this line from your project's `.gitignore` and commit 
 .nvim-agent-comments.json
 ```
 
-The file uses a versioned JSON schema. See [CONTRACT.md](CONTRACT.md) for fields, root rules, safe-write behavior, and retrieval output.
+The file uses a versioned JSON schema. Each comment may contain `replies`, an array of objects with a required `body` and an optional `created_at` field. The bundled agent skill appends a reply after successfully handling a comment without running a command just to obtain the time.
 
 ## Help
 

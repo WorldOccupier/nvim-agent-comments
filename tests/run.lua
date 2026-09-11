@@ -28,6 +28,7 @@ value.comments[1] = {
   created_at = timestamp,
   updated_at = timestamp,
   status = 'resolved',
+  replies = { { body = 'Implemented with a timeout guard' } },
   future_field = 'preserve me',
 }
 assert(store.validate(value))
@@ -37,7 +38,13 @@ assert(store.save(path, value))
 local loaded, load_err = store.load(path)
 check(loaded ~= nil, load_err)
 check(loaded.comments[1].future_field == 'preserve me', 'unknown field was lost')
+check(loaded.comments[1].replies[1].body == 'Implemented with a timeout guard', 'reply was lost')
 check(store.load(path .. MISSING_SUFFIX).comments ~= nil, 'missing store did not return empty value')
+
+local malformed = vim.deepcopy(value)
+malformed.comments[1].replies = { { body = '', created_at = timestamp } }
+local replies_ok, replies_err = store.validate(malformed)
+check(replies_ok == nil and replies_err:find('replies%[1%]%.body') ~= nil, 'invalid reply was accepted')
 
 local invalid, invalid_err = store.decode('{"version": 99, "comments": []}')
 check(invalid == nil and invalid_err ~= nil, 'unsupported version was accepted')

@@ -19,6 +19,7 @@ local STALE_SIGN = '!'
 local BOX_MARGIN = 4
 local BOX_MAX_WIDTH = 100
 local BOX_BORDER = '─'
+local WATCHERS = {}
 
 M.config = {
   signs = true,
@@ -103,6 +104,42 @@ local function truncate_display(text, width)
   return vim.fn.strcharpart(text, 0, length)
 end
 
+local function watch_store(project_root, path)
+  if WATCHERS[project_root] then return end
+  local uv = vim.uv or vim.loop
+  local event = uv.new_fs_event()
+  local timer = uv.new_timer()
+  if not event or not timer then return end
+  local signature = store.signature(path)
+  local scheduled = false
+  local function refresh()
+    if scheduled then return end
+    scheduled = true
+    vim.schedule(function()
+      scheduled = false
+      for _, buffer in ipairs(vim.api.nvim_list_bufs()) do
+        if vim.api.nvim_buf_is_loaded(buffer) then M.render(buffer) end
+      end
+    end)
+  end
+  local ok = event:start(project_root, {}, function(err)
+    if not err then refresh() end
+  end)
+  if ok == nil then
+    event:close()
+    timer:close()
+    return
+  end
+  timer:start(300, 300, function()
+    local current = store.signature(path)
+    if current ~= signature then
+      signature = current
+      refresh()
+    end
+  end)
+  WATCHERS[project_root] = { event = event, timer = timer }
+end
+
 local function comment_lines(comment, status, start_line, end_line)
   local width = math.max(2, math.min(BOX_MAX_WIDTH, vim.o.columns - BOX_MARGIN))
   local group = status == 'stale' and 'CommentBoxStale' or 'CommentBoxTitle'
@@ -115,11 +152,27 @@ local function comment_lines(comment, status, start_line, end_line)
   local body = truncate_display(comment.body, body_width)
   local body_padding = string.rep(' ', body_width - vim.fn.strdisplaywidth(body))
   local bottom = '└' .. string.rep(BOX_BORDER, math.max(0, width - 2)) .. '┘'
-  return {
+  local result = {
     { { top, group }, { top_border, border_group } },
     { { '│ ' .. body .. body_padding .. ' │', 'CommentBoxText' } },
     { { bottom, border_group } },
   }
+  for _, reply in ipairs(comment.replies or {}) do
+    local remaining = reply.body
+    local prefix = '│ ↳ Agent: '
+    repeat
+      local available = math.max(1, width - vim.fn.strdisplaywidth(prefix))
+      local reply_body = truncate_display(remaining, available)
+      result[#result + 1] = {
+        { prefix, 'CommentReplyBorder' },
+        { reply_body, 'CommentReplyText' },
+      }
+      remaining = remaining:sub(#reply_body + 1):gsub('^%s+', '')
+      prefix = '│   '
+    until remaining == ''
+  end
+  if #(comment.replies or {}) > 0 then result[#result + 1] = { { ' ', 'Normal' } } end
+  return result
 end
 
 function M.render(bufnr)
@@ -129,6 +182,7 @@ function M.render(bufnr)
   if not source then return end
   local project_root, path = project(source.target_bufnr)
   if not project_root then return end
+  watch_store(project_root, path)
   local comments = store.load(path)
   if not comments then return end
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
@@ -232,7 +286,7 @@ function M.add(start_line, end_line, bufnr)
     comments.comments[#comments.comments + 1] = {
       id = store.new_id(comments), path = assert(root.relative(project_root, source.filename)),
       start_line = mapped_start, end_line = mapped_end, context = current.context,
-      context_start_offset = current.context_start_offset, body = body,
+      context_start_offset = current.context_start_offset, body = body, replies = {},
       created_at = now, updated_at = now, status = 'resolved',
     }
     local ok, err = store.save(path, comments)
@@ -380,6 +434,11 @@ function M.delete_at(bufnr)
 end
 
 function M.setup(opts)
+  for project_root, watcher in pairs(WATCHERS) do
+    if not watcher.event:is_closing() then watcher.event:close() end
+    if not watcher.timer:is_closing() then watcher.timer:close() end
+    WATCHERS[project_root] = nil
+  end
   vim.api.nvim_set_hl(0, 'CommentBackdrop', { fg = '#0d1117', bg = '#0d1117' })
   vim.api.nvim_set_hl(0, 'CommentBoxActiveBorder', { fg = '#58a6ff', bg = '#111820' })
   vim.api.nvim_set_hl(0, 'CommentBoxStaleBorder', { fg = '#f85149', bg = '#0b0f14' })
@@ -388,6 +447,8 @@ function M.setup(opts)
   vim.api.nvim_set_hl(0, 'CommentBoxHint', { fg = '#8b949e', bg = '#111820' })
   vim.api.nvim_set_hl(0, 'CommentBoxSaved', { fg = '#3fb950', bg = '#0b0f14', bold = true })
   vim.api.nvim_set_hl(0, 'CommentBoxStale', { fg = '#f85149', bg = '#0b0f14', bold = true })
+  vim.api.nvim_set_hl(0, 'CommentReplyBorder', { fg = '#3fb950', bg = '#0b0f14', bold = true })
+  vim.api.nvim_set_hl(0, 'CommentReplyText', { fg = '#7ee787', bg = '#0b0f14' })
   vim.api.nvim_set_hl(0, 'CommentPicker', { fg = '#e6edf3', bg = '#111820' })
   vim.api.nvim_set_hl(0, 'CommentPickerSelected', { fg = '#e6edf3', bg = '#17263a' })
   M.config = vim.tbl_deep_extend('force', M.config, opts or {})

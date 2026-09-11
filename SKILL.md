@@ -9,7 +9,7 @@ This plugin lets developers attach instructions to source lines from Neovim. It 
 
 ## Start here
 
-Read `.nvim-agent-comments.json`. Do not edit it unless the user explicitly asks you to.
+Read `.nvim-agent-comments.json`. Do not edit comment text or anchors unless the user explicitly asks you to. You may append an agent reply after handling a comment, as described below.
 
 Handle each comment based on its body:
 
@@ -48,7 +48,10 @@ For each resolved comment:
 3. Explain the attached source when the user asks a question.
 4. Answer the question or make the requested change.
 5. Run relevant tests after code changes.
-6. Report the comment ID, resolved location, and result.
+6. Append a reply to the comment's `replies` array summarizing the answer or completed change.
+7. Report the comment ID, resolved location, and result.
+
+A reply is an object with a non-empty `body`. Preserve every other store field and create `replies` as an array when it is absent. Do not run a command just to obtain a timestamp; `created_at` is optional and should only be included when the time is already available. Write the store atomically, and do not append a reply when the requested work failed or is incomplete. Neovim displays replies beneath the original comment.
 
 Give enough context that the user does not need to reopen the file. Leave out unrelated implementation details.
 
@@ -68,7 +71,7 @@ local result = fetch_user(id)
 
 For a range, write the location as `path:start-end` and quote the relevant range. For a stale comment, show its original range and explain why resolution failed. Include stored context when it helps the user identify the intended code. Never invent a current location.
 
-Do not delete, edit, re-anchor, or mark a comment complete unless the user asks.
+Do not delete, edit, re-anchor, or mark a comment complete unless the user asks. Appending the reply described above is the only automatic store edit.
 
 ## Neovim commands
 
