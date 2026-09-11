@@ -24,6 +24,12 @@ The bundled [`SKILL.md`](SKILL.md) tells coding agents how to find, resolve, and
 
 ![A coding agent reading a saved Neovim comment](assets/agent-retrieval.png)
 
+### Agent replies
+
+After handling a comment, the coding agent records a reply beneath the original comment. Long replies wrap and updates appear without reloading the source file.
+
+![An agent reply rendered beneath a Neovim comment](assets/agent-replies.png)
+
 ## Requirements
 
 - Neovim 0.9 or newer. The floating comment editor uses window titles introduced in Neovim 0.9.
