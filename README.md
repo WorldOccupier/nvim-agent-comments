@@ -41,7 +41,7 @@ With lazy.nvim:
 
 ```lua
 {
-  'WorldOccupier/nvim-comments',
+  'WorldOccupier/nvim-agent-comments',
   config = function()
     require('nvim-agent-comments').setup()
   end,
@@ -52,7 +52,7 @@ With packer.nvim:
 
 ```lua
 use {
-  'WorldOccupier/nvim-comments',
+  'WorldOccupier/nvim-agent-comments',
   config = function()
     require('nvim-agent-comments').setup()
   end,
