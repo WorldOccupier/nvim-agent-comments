@@ -31,6 +31,8 @@ local REPLY_PREFIX = REPLY_BORDER .. ' ↳ Agent: '
 local REPLY_INDENT = REPLY_BORDER .. string.rep(' ', vim.fn.strdisplaywidth(REPLY_PREFIX) - vim.fn.strdisplaywidth(REPLY_BORDER))
 local WATCHERS = {}
 local RENDER_TIMERS = {}
+local RENDERED_WIDTHS = {}
+local RECHECKING_WIDTH = {}
 local uv = vim.uv or vim.loop
 
 M.config = {
@@ -185,7 +187,6 @@ local function stop_render_timer(bufnr)
 end
 
 local function box_width(bufnr)
-  if bufnr == 0 then bufnr = vim.api.nvim_get_current_buf() end
   local windows = vim.tbl_filter(function(window)
     return vim.api.nvim_win_get_config(window).relative == ''
   end, vim.fn.win_findbuf(bufnr))
@@ -234,8 +235,47 @@ local function comment_lines(comment, status, start_line, end_line, width)
   return result
 end
 
+-- 'textoff' only changes on redraw, so a sign column that the signs just placed will show is not yet
+-- counted; once the redraw has happened, render again if the available width changed. Renders in
+-- the same tick share one check against the width of the latest render, and the render a check
+-- triggers schedules no further check, so a width that keeps changing cannot loop.
+local function render_again_if_width_changed(bufnr, width)
+  if RECHECKING_WIDTH[bufnr] then return end
+  local pending = RENDERED_WIDTHS[bufnr] ~= nil
+  RENDERED_WIDTHS[bufnr] = width
+  if pending then return end
+  vim.schedule(function()
+    local rendered_width = RENDERED_WIDTHS[bufnr]
+    RENDERED_WIDTHS[bufnr] = nil
+    if not vim.api.nvim_buf_is_loaded(bufnr) or box_width(bufnr) == rendered_width then return end
+    RECHECKING_WIDTH[bufnr] = true
+    local ok, err = pcall(M.render, bufnr)
+    RECHECKING_WIDTH[bufnr] = nil
+    if not ok then error(err) end
+  end)
+end
+
+local function place_signs(bufnr, entry, line_count)
+  local status, range_start, range_end = entry.status, entry.start_line, entry.end_line
+  for line = math.max(1, range_start), math.min(line_count, range_end) do
+    local sign = SIGN
+    if status == 'stale' then
+      sign = STALE_SIGN
+    elseif range_start ~= range_end then
+      sign = line == range_start and RANGE_START_SIGN
+          or line == range_end and RANGE_END_SIGN or RANGE_MIDDLE_SIGN
+    end
+    vim.api.nvim_buf_set_extmark(bufnr, NAMESPACE, line - 1, 0, {
+      sign_text = sign,
+      sign_hl_group = status == 'stale' and 'DiagnosticSignError' or 'DiagnosticSignInfo',
+    })
+  end
+end
+
 function M.render(bufnr)
-  bufnr = bufnr or 0
+  if not bufnr or bufnr == 0 then bufnr = vim.api.nvim_get_current_buf() end
+  -- Measured before clearing so the sign column of the previous render is still counted.
+  local width = box_width(bufnr)
   vim.api.nvim_buf_clear_namespace(bufnr, NAMESPACE, 0, -1)
   local source = diffview.resolve(bufnr)
   if not source then return end
@@ -246,34 +286,20 @@ function M.render(bufnr)
   if not relative then return end
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
   local entries = comments_in_file(path, relative, lines)
-  if not entries then return end
+  if not entries or #entries == 0 then return end
 
   for _, entry in ipairs(entries) do
-    local comment, status = entry.comment, entry.status
     local range_start, range_end = entry.start_line, entry.end_line
     if range_end >= 1 and range_end <= #lines then
       vim.api.nvim_buf_set_extmark(bufnr, NAMESPACE, range_end - 1, 0, {
-        virt_lines = comment_lines(comment, status, range_start, range_end, box_width(bufnr)),
+        virt_lines = comment_lines(entry.comment, entry.status, range_start, range_end, width),
         virt_lines_above = false,
         virt_lines_leftcol = false,
       })
-      if M.config.signs then
-        for line = math.max(1, range_start), math.min(#lines, range_end) do
-          local sign = SIGN
-          if status == 'stale' then
-            sign = STALE_SIGN
-          elseif range_start ~= range_end then
-            sign = line == range_start and RANGE_START_SIGN
-                or line == range_end and RANGE_END_SIGN or RANGE_MIDDLE_SIGN
-          end
-          vim.api.nvim_buf_set_extmark(bufnr, NAMESPACE, line - 1, 0, {
-            sign_text = sign,
-            sign_hl_group = status == 'stale' and 'DiagnosticSignError' or 'DiagnosticSignInfo',
-          })
-        end
-      end
+      if M.config.signs then place_signs(bufnr, entry, #lines) end
     end
   end
+  render_again_if_width_changed(bufnr, width)
 end
 
 local function open_project_picker(bufnr, open_picker, jump_to_end)

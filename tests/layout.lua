@@ -47,8 +47,20 @@ local function box_rows()
   end
 end
 
+local function text_area_width()
+  local info = vim.fn.getwininfo(vim.api.nvim_get_current_win())[1]
+  return info.width - info.textoff
+end
+
 comments.setup({ signs = true, context_lines = 1 })
 vim.cmd('edit ' .. vim.fn.fnameescape(source))
+vim.cmd('redraw')
+vim.wait(50)
+check(vim.fn.getwininfo(vim.api.nvim_get_current_win())[1].textoff > 0, 'sign column did not appear')
+for _, row in ipairs(box_rows()) do
+  check(vim.fn.strdisplaywidth(row) <= text_area_width(), 'box overflowed the sign column: ' .. row)
+end
+
 vim.cmd('vsplit')
 vim.cmd('vertical resize 20')
 vim.api.nvim_exec_autocmds('VimResized', {})
