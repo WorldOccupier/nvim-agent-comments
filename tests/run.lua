@@ -41,6 +41,21 @@ check(loaded.comments[1].future_field == 'preserve me', 'unknown field was lost'
 check(loaded.comments[1].replies[1].body == 'Implemented with a timeout guard', 'reply was lost')
 check(store.load(path .. MISSING_SUFFIX).comments ~= nil, 'missing store did not return empty value')
 
+loaded.comments[1].body = 'mutated by a caller'
+local open = io.open
+local reads = 0
+io.open = function(...)
+  reads = reads + 1
+  return open(...)
+end
+local cached = assert(store.load(path))
+io.open = open
+check(reads == 0, 'unchanged store was read from disk again')
+check(cached.comments[1].body == value.comments[1].body, 'caller mutation leaked into the store cache')
+value.comments[1].body = 'Changed on disk'
+assert(store.save(path, value))
+check(assert(store.load(path)).comments[1].body == 'Changed on disk', 'cache did not notice a store write')
+
 local malformed = vim.deepcopy(value)
 malformed.comments[1].replies = { { body = '', created_at = timestamp } }
 local replies_ok, replies_err = store.validate(malformed)

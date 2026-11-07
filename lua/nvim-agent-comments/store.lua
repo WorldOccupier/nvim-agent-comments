@@ -16,6 +16,7 @@ local ID_FORMAT = 'c_%x_%x'
 -- Stores written before the rename used 'resolved' for anchored comments.
 local LEGACY_STATUS_ANCHORED = 'resolved'
 local ZERO = 0
+local CACHE = {}
 
 M.VERSION = STORE_VERSION
 
@@ -123,7 +124,15 @@ function M.decode(text)
   return value
 end
 
-function M.load(path)
+function M.signature(path)
+  local stat = uv.fs_stat(path)
+  if not stat then return nil end
+  return table.concat({
+    stat.ino or 0, stat.size or 0, stat.mtime and stat.mtime.sec or 0, stat.mtime and stat.mtime.nsec or 0,
+  }, ':')
+end
+
+local function read(path)
   local file = io.open(path, FILE_READ_MODE)
   if not file then
     if uv.fs_stat(path) then return fail('unable to read store: ' .. path) end
@@ -134,10 +143,17 @@ function M.load(path)
   return M.decode(text)
 end
 
-function M.signature(path)
-  local stat = uv.fs_stat(path)
-  if not stat then return nil end
-  return table.concat({ stat.size or 0, stat.mtime and stat.mtime.sec or 0, stat.mtime and stat.mtime.nsec or 0 }, ':')
+-- Returns a fresh copy on every call so callers can mutate it without touching the cache.
+function M.load(path)
+  -- The signature is taken before reading so a concurrent write is never cached under the older signature.
+  local signature = M.signature(path)
+  local cached = CACHE[path]
+  if signature and cached and cached.signature == signature then return vim.deepcopy(cached.value) end
+  CACHE[path] = nil
+  local value, err = read(path)
+  if not value then return nil, err end
+  if signature then CACHE[path] = { signature = signature, value = vim.deepcopy(value) } end
+  return value
 end
 
 function M.save(path, store, expected_signature)
