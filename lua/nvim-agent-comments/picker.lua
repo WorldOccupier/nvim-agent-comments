@@ -1,5 +1,7 @@
 local M = {}
 
+local text_layout = require('nvim-agent-comments.text')
+
 local BORDER = 'rounded'
 local MAX_HEIGHT = 24
 local MAX_WIDTH = 120
@@ -10,14 +12,6 @@ local BOX_MAX_WIDTH = 100
 local BOX_BORDER = '─'
 local SEARCH_HEIGHT = 12
 local SEARCH_PREFIX = ' ❯ '
-
-local function truncate_display(text, width)
-  local length = vim.fn.strchars(text)
-  while length > 0 and vim.fn.strdisplaywidth(vim.fn.strcharpart(text, 0, length)) > width do
-    length = length - 1
-  end
-  return vim.fn.strcharpart(text, 0, length)
-end
 
 local function close(window, buffer)
   if vim.api.nvim_win_is_valid(window) then vim.api.nvim_win_close(window, true) end
@@ -33,7 +27,7 @@ local function item_lines(item)
   end
 
   local body_width = math.min(BOX_MAX_WIDTH - 4, math.max(20, vim.fn.strdisplaywidth(item.comment.body)))
-  local body = truncate_display(item.comment.body, body_width)
+  local body = text_layout.truncate_display(item.comment.body, body_width)
   local padding = string.rep(' ', body_width - vim.fn.strdisplaywidth(body))
   local top = '  ┌ Comment ' .. string.rep(BOX_BORDER, math.max(0, body_width - 7)) .. '┐'
   lines[#lines + 1] = top

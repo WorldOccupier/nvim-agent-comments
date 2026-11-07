@@ -1,10 +1,10 @@
-.PHONY: test test-anchors test-diffview test-root test-storage test-retrieval test-workflow test-commands test-picker test-search test-editor
+.PHONY: test test-anchors test-diffview test-root test-storage test-retrieval test-workflow test-commands test-picker test-search test-editor test-text
 
 NVIM ?= nvim
 
 TEST_FLAGS := --headless -u NONE
 
-test: test-anchors test-diffview test-root test-storage test-retrieval test-workflow test-commands test-picker test-search test-editor
+test: test-anchors test-diffview test-root test-storage test-retrieval test-workflow test-commands test-picker test-search test-editor test-text
 
 test-anchors:
 	@$(NVIM) $(TEST_FLAGS) -l tests/anchors.lua
@@ -35,3 +35,6 @@ test-search:
 
 test-editor:
 	@$(NVIM) $(TEST_FLAGS) -l tests/editor.lua
+
+test-text:
+	@$(NVIM) $(TEST_FLAGS) -l tests/text.lua

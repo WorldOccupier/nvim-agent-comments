@@ -7,6 +7,7 @@ local editor = require('nvim-agent-comments.editor')
 local picker = require('nvim-agent-comments.picker')
 local root = require('nvim-agent-comments.root')
 local store = require('nvim-agent-comments.store')
+local text_layout = require('nvim-agent-comments.text')
 
 local NAMESPACE = vim.api.nvim_create_namespace('nvim-agent-comments')
 local DEFAULT_CONTEXT_LINES = 2
@@ -128,14 +129,6 @@ local function project_comments(bufnr)
   return entries, nil, project_root
 end
 
-local function truncate_display(text, width)
-  local length = vim.fn.strchars(text)
-  while length > 0 and vim.fn.strdisplaywidth(vim.fn.strcharpart(text, 0, length)) > width do
-    length = length - 1
-  end
-  return vim.fn.strcharpart(text, 0, length)
-end
-
 local function render_loaded_buffers()
   for _, buffer in ipairs(vim.api.nvim_list_bufs()) do
     if vim.api.nvim_buf_is_loaded(buffer) then M.render(buffer) end
@@ -193,7 +186,7 @@ local function comment_lines(comment, status, start_line, end_line)
   local top = '┌ ' .. label .. ' '
   local top_border = string.rep(BOX_BORDER, math.max(0, width - vim.fn.strdisplaywidth(top) - 1)) .. '┐'
   local body_width = math.max(0, width - 4)
-  local body = truncate_display(comment.body, body_width)
+  local body = text_layout.truncate_display(comment.body, body_width)
   local body_padding = string.rep(' ', body_width - vim.fn.strdisplaywidth(body))
   local bottom = '└' .. string.rep(BOX_BORDER, math.max(0, width - 2)) .. '┘'
   local result = {
@@ -206,7 +199,7 @@ local function comment_lines(comment, status, start_line, end_line)
     local prefix = '│ ↳ Agent: '
     repeat
       local available = math.max(1, width - vim.fn.strdisplaywidth(prefix))
-      local reply_body = truncate_display(remaining, available)
+      local reply_body = text_layout.truncate_display(remaining, available)
       result[#result + 1] = {
         { prefix, 'CommentReplyBorder' },
         { reply_body, 'CommentReplyText' },
