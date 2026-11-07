@@ -83,6 +83,51 @@ check(reply_highlight, 'agent reply did not use its reply highlight')
 check(reply_lines > 1, 'long agent reply did not wrap')
 check(reply_spacing, 'agent reply did not leave spacing below it')
 
+local function rendered_box()
+  for _, mark in ipairs(vim.api.nvim_buf_get_extmarks(0, -1, 0, -1, { details = true })) do
+    if mark[4].virt_lines then return mark[4].virt_lines end
+  end
+end
+local function line_text(virtual_line)
+  local text = ''
+  for _, chunk in ipairs(virtual_line) do text = text .. chunk[1] end
+  return text
+end
+local function box_rows(virtual_lines)
+  local rows = {}
+  for _, virtual_line in ipairs(virtual_lines) do
+    if virtual_line[1][2] ~= 'CommentReplyBorder' and virtual_line[1][2] ~= 'Normal' then
+      rows[#rows + 1] = line_text(virtual_line)
+    end
+  end
+  return rows
+end
+
+local box = rendered_box()
+local reply_chunks, reply_prefixes = {}, {}
+for _, virtual_line in ipairs(box) do
+  if virtual_line[2] and virtual_line[2][2] == 'CommentReplyText' then
+    reply_chunks[#reply_chunks + 1] = virtual_line[2][1]
+    reply_prefixes[#reply_prefixes + 1] = vim.fn.strdisplaywidth(virtual_line[1][1])
+  end
+end
+check(table.concat(reply_chunks, ' ') == vim.trim(agent_response:gsub('%s+', ' ')), 'agent reply wrapped mid-word')
+check(reply_prefixes[2] == reply_prefixes[1], 'reply continuation was not aligned under the reply text')
+
+saved.comments[1].body = 'Edited comment ' .. string.rep('that is long enough to wrap inside the box ', 4)
+assert(store.save(store_path, saved))
+vim.cmd('vsplit')
+vim.cmd('vertical resize 30')
+vim.api.nvim_exec_autocmds('VimResized', {})
+local narrow_rows = box_rows(rendered_box())
+check(#narrow_rows > 3, 'long comment body did not wrap inside the box')
+for _, row in ipairs(narrow_rows) do
+  check(vim.fn.strdisplaywidth(row) == 29, 'box did not fit the narrowest window: ' .. row)
+end
+vim.cmd('only')
+vim.api.nvim_exec_autocmds('VimResized', {})
+check(vim.fn.strdisplaywidth(box_rows(rendered_box())[1]) == vim.o.columns - 1, 'box did not grow back after resizing')
+
 defer_submit = true
 comments.edit_at(0)
 check(pending_submit ~= nil, 'edit did not open the editor')

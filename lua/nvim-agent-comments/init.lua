@@ -17,11 +17,15 @@ local RANGE_START_SIGN = '┌'
 local RANGE_MIDDLE_SIGN = '│'
 local RANGE_END_SIGN = '└'
 local STALE_SIGN = '!'
-local BOX_MARGIN = 4
+local BOX_MARGIN = 1
+local BOX_MIN_WIDTH = 16
 local BOX_MAX_WIDTH = 100
 local BOX_BORDER = '─'
 local STORE_POLL_MS = 300
 local RENDER_DEBOUNCE_MS = 100
+local REPLY_BORDER = '│'
+local REPLY_PREFIX = REPLY_BORDER .. ' ↳ Agent: '
+local REPLY_INDENT = REPLY_BORDER .. string.rep(' ', vim.fn.strdisplaywidth(REPLY_PREFIX) - vim.fn.strdisplaywidth(REPLY_BORDER))
 local WATCHERS = {}
 local RENDER_TIMERS = {}
 local uv = vim.uv or vim.loop
@@ -177,37 +181,53 @@ local function stop_render_timer(bufnr)
   RENDER_TIMERS[bufnr] = nil
 end
 
-local function comment_lines(comment, status, start_line, end_line)
-  local width = math.max(2, math.min(BOX_MAX_WIDTH, vim.o.columns - BOX_MARGIN))
-  local group = status == 'stale' and 'CommentBoxStale' or 'CommentBoxTitle'
+local function box_width(bufnr)
+  if bufnr == 0 then bufnr = vim.api.nvim_get_current_buf() end
+  local windows = vim.tbl_filter(function(window)
+    return vim.api.nvim_win_get_config(window).relative == ''
+  end, vim.fn.win_findbuf(bufnr))
+  if #windows == 0 then windows = { vim.api.nvim_get_current_win() } end
+  local available = vim.o.columns
+  for _, window in ipairs(windows) do
+    local info = vim.fn.getwininfo(window)[1]
+    if info then available = math.min(available, info.width - info.textoff) end
+  end
+  return math.max(BOX_MIN_WIDTH, math.min(BOX_MAX_WIDTH, available - BOX_MARGIN))
+end
+
+local function padded(line, width)
+  return line .. string.rep(' ', math.max(0, width - vim.fn.strdisplaywidth(line)))
+end
+
+local function box_lines(comment, status, start_line, end_line, width)
+  local title_group = status == 'stale' and 'CommentBoxStale' or 'CommentBoxTitle'
   local border_group = status == 'stale' and 'CommentBoxStaleBorder' or 'CommentBoxActiveBorder'
   local label = status == 'stale' and 'Stale comment' or 'Comment'
   if start_line ~= end_line then label = ('%s · lines %d-%d'):format(label, start_line, end_line) end
   local top = '┌ ' .. label .. ' '
   local top_border = string.rep(BOX_BORDER, math.max(0, width - vim.fn.strdisplaywidth(top) - 1)) .. '┐'
-  local body_width = math.max(0, width - 4)
-  local body = text_layout.truncate_display(comment.body, body_width)
-  local body_padding = string.rep(' ', body_width - vim.fn.strdisplaywidth(body))
-  local bottom = '└' .. string.rep(BOX_BORDER, math.max(0, width - 2)) .. '┘'
-  local result = {
-    { { top, group }, { top_border, border_group } },
-    { { '│ ' .. body .. body_padding .. ' │', 'CommentBoxText' } },
-    { { bottom, border_group } },
-  }
-  for _, reply in ipairs(comment.replies or {}) do
-    local remaining = reply.body
-    local prefix = '│ ↳ Agent: '
-    repeat
-      local available = math.max(1, width - vim.fn.strdisplaywidth(prefix))
-      local reply_body = text_layout.truncate_display(remaining, available)
-      result[#result + 1] = {
-        { prefix, 'CommentReplyBorder' },
-        { reply_body, 'CommentReplyText' },
-      }
-      remaining = remaining:sub(#reply_body + 1):gsub('^%s+', '')
-      prefix = '│   '
-    until remaining == ''
+  local result = { { { top, title_group }, { top_border, border_group } } }
+  local body_width = math.max(1, width - 4)
+  local body_lines = text_layout.wrap(comment.body, body_width)
+  if #body_lines == 0 then body_lines = { '' } end
+  for _, line in ipairs(body_lines) do
+    result[#result + 1] = { { '│ ' .. padded(line, body_width) .. ' │', 'CommentBoxText' } }
   end
+  result[#result + 1] = { { '└' .. string.rep(BOX_BORDER, math.max(0, width - 2)) .. '┘', border_group } }
+  return result
+end
+
+local function reply_lines(reply, width, result)
+  local prefix = REPLY_PREFIX
+  for _, line in ipairs(text_layout.wrap(reply.body, width - vim.fn.strdisplaywidth(REPLY_PREFIX))) do
+    result[#result + 1] = { { prefix, 'CommentReplyBorder' }, { line, 'CommentReplyText' } }
+    prefix = REPLY_INDENT
+  end
+end
+
+local function comment_lines(comment, status, start_line, end_line, width)
+  local result = box_lines(comment, status, start_line, end_line, width)
+  for _, reply in ipairs(comment.replies or {}) do reply_lines(reply, width, result) end
   if #(comment.replies or {}) > 0 then result[#result + 1] = { { ' ', 'Normal' } } end
   return result
 end
@@ -231,7 +251,7 @@ function M.render(bufnr)
     local range_start, range_end = entry.start_line, entry.end_line
     if range_end >= 1 and range_end <= #lines then
       vim.api.nvim_buf_set_extmark(bufnr, NAMESPACE, range_end - 1, 0, {
-        virt_lines = comment_lines(comment, status, range_start, range_end),
+        virt_lines = comment_lines(comment, status, range_start, range_end, box_width(bufnr)),
         virt_lines_above = false,
         virt_lines_leftcol = false,
       })
@@ -434,6 +454,17 @@ function M.delete_at(bufnr)
   end)
 end
 
+local function render_windows(windows)
+  local rendered = {}
+  for _, window in ipairs(windows) do
+    local buffer = vim.api.nvim_win_is_valid(window) and vim.api.nvim_win_get_buf(window)
+    if buffer and not rendered[buffer] then
+      rendered[buffer] = true
+      M.render(buffer)
+    end
+  end
+end
+
 function M.setup(opts)
   close_timers(WATCHERS)
   close_timers(RENDER_TIMERS)
@@ -480,6 +511,14 @@ function M.setup(opts)
   vim.api.nvim_create_autocmd('BufWipeout', {
     group = group,
     callback = function(args) stop_render_timer(args.buf) end,
+  })
+  vim.api.nvim_create_autocmd('WinResized', {
+    group = group,
+    callback = function() render_windows(vim.v.event.windows) end,
+  })
+  vim.api.nvim_create_autocmd('VimResized', {
+    group = group,
+    callback = function() render_windows(vim.api.nvim_tabpage_list_wins(0)) end,
   })
   if M.config.navigation then
     vim.keymap.set('n', ']q', function() M.navigate(1, 0) end, { desc = 'Next agent comment' })
