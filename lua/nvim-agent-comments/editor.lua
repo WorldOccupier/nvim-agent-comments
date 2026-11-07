@@ -121,7 +121,6 @@ local function create_editor(opts, on_submit, layout)
     zindex = DIALOG_ZINDEX,
   })
   vim.wo[window].winhl = DIALOG_HIGHLIGHT
-  vim.api.nvim_win_set_cursor(window, { INPUT_LINE, #INPUT_PREFIX + #(opts.initial or '') })
 
   return {
     window = window,
@@ -192,7 +191,8 @@ function M.open(opts, on_submit)
     buffer = buffer,
     nowait = true,
   })
-  vim.cmd('startinsert')
+  -- The bang appends after the last character; plain startinsert would insert before it.
+  vim.cmd('startinsert!')
 end
 
 return M
