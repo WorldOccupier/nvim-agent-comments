@@ -144,11 +144,15 @@ local function read(path)
 end
 
 -- Returns a fresh copy on every call so callers can mutate it without touching the cache.
-function M.load(path)
+-- Pass { fresh = true } before modifying and saving: an in-place rewrite of the same size within one
+-- mtime tick keeps the signature, so only a read from disk is guaranteed to see it.
+function M.load(path, opts)
   -- The signature is taken before reading so a concurrent write is never cached under the older signature.
   local signature = M.signature(path)
   local cached = CACHE[path]
-  if signature and cached and cached.signature == signature then return vim.deepcopy(cached.value) end
+  if signature and cached and cached.signature == signature and not (opts and opts.fresh) then
+    return vim.deepcopy(cached.value)
+  end
   CACHE[path] = nil
   local value, err = read(path)
   if not value then return nil, err end

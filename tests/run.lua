@@ -56,6 +56,24 @@ value.comments[1].body = 'Changed on disk'
 assert(store.save(path, value))
 check(assert(store.load(path)).comments[1].body == 'Changed on disk', 'cache did not notice a store write')
 
+local uv = vim.uv or vim.loop
+local FIXED_TIME = 1700000000
+assert(uv.fs_utime(path, FIXED_TIME, FIXED_TIME))
+assert(store.load(path))
+local signature = store.signature(path)
+local file = assert(io.open(path, 'r'))
+local text = file:read('*a')
+file:close()
+file = assert(io.open(path, 'w'))
+file:write((text:gsub('Changed on disk', 'Changed on DISK')))
+file:close()
+assert(uv.fs_utime(path, FIXED_TIME, FIXED_TIME))
+check(store.signature(path) == signature, 'in-place rewrite changed the store signature')
+check(
+  assert(store.load(path, { fresh = true })).comments[1].body == 'Changed on DISK',
+  'fresh load returned the cached store'
+)
+
 local malformed = vim.deepcopy(value)
 malformed.comments[1].replies = { { body = '', created_at = timestamp } }
 local replies_ok, replies_err = store.validate(malformed)

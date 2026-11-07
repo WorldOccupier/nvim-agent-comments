@@ -333,7 +333,7 @@ function M.add(start_line, end_line, bufnr)
     if not mapped_start then return vim.notify(map_err, vim.log.levels.ERROR) end
     local current_lines = vim.api.nvim_buf_get_lines(source.target_bufnr, 0, -1, false)
     local current = anchors.capture(current_lines, mapped_start, mapped_end, M.config.context_lines)
-    local comments = assert(store.load(path))
+    local comments = assert(store.load(path, { fresh = true }))
     local now = store.timestamp()
     comments.comments[#comments.comments + 1] = {
       id = store.new_id(comments), path = assert(root.relative(project_root, source.filename)),
@@ -367,7 +367,7 @@ end
 -- Reloads the store so changes written since the comment was chosen (such as agent replies) survive.
 local function update_comment(bufnr, path, id, apply)
   local signature = store.signature(path)
-  local comments, load_err = store.load(path)
+  local comments, load_err = store.load(path, { fresh = true })
   if not comments then return vim.notify(load_err, vim.log.levels.ERROR) end
   for index, comment in ipairs(comments.comments) do
     if comment.id == id then

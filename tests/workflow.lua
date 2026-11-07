@@ -142,6 +142,22 @@ check(saved.comments[1].body == 'Edited while agent replied', 'edit after an age
 check(#saved.comments[1].replies == 2, 'edit discarded a reply written while the editor was open')
 
 local uv = vim.uv or vim.loop
+local FIXED_TIME = 1700000000
+assert(uv.fs_utime(store_path, FIXED_TIME, FIXED_TIME))
+defer_submit = true
+comments.edit_at(0)
+local store_file = assert(io.open(store_path, 'r'))
+local store_text = store_file:read('*a')
+store_file:close()
+store_file = assert(io.open(store_path, 'w'))
+store_file:write((store_text:gsub('Reply written while editing', 'Reply WRITTEN while editing')))
+store_file:close()
+assert(uv.fs_utime(store_path, FIXED_TIME, FIXED_TIME))
+pending_submit('Edited after an in-place rewrite')
+saved = assert(store.load(store_path, { fresh = true }))
+check(saved.comments[1].body == 'Edited after an in-place rewrite', 'edit after an in-place rewrite did not save')
+check(saved.comments[1].replies[2].body == 'Reply WRITTEN while editing', 'edit discarded an in-place store rewrite')
+
 local function active_timers()
   local count = 0
   uv.walk(function(handle)
