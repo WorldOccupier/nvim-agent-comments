@@ -104,6 +104,8 @@ local function box_rows(virtual_lines)
 end
 
 local box = rendered_box()
+check(line_text(box[1]):find('┌ ✓ Comment', 1, true) == 1, 'handled comment title did not show a check mark')
+check(box[1][1][2] == 'CommentBoxHandledTitle', 'handled comment title did not use the handled highlight')
 local reply_chunks, reply_prefixes = {}, {}
 for _, virtual_line in ipairs(box) do
   if virtual_line[2] and virtual_line[2][2] == 'CommentReplyText' then
@@ -193,6 +195,8 @@ vim.api.nvim_buf_set_lines(0, 1, 4, false, { 'replacement', 'new target', 'tail'
 vim.cmd('write')
 retrieved = assert(cli.collect({ bufnr = 0 }))
 check(retrieved.comments[1].status == 'stale', 'changed context did not become stale')
+comments.render(0)
+check(line_text(rendered_box()[1]):find('┌ Stale comment', 1, true) == 1, 'stale handled comment did not show as stale')
 
 vim.api.nvim_win_set_cursor(0, { 2, 0 })
 comments.reanchor(2, 2, 0)

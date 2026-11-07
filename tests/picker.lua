@@ -41,5 +41,13 @@ local result_lines = vim.api.nvim_buf_get_lines(results_buffer, 0, -1, false)
 assert(#result_lines == 2, 'live search did not render matching suggestions')
 assert(result_lines[1]:find('cache.lua', 1, true), 'search results were not displayed above the prompt')
 
+items[1].context = {}
+items[1].comment.replies = { { body = 'Done' } }
+picker.open({ items[1] }, function() end)
+local list_lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+assert(list_lines[3]:find('┌ ✓ Comment', 1, true), 'list did not mark the handled comment')
+assert(vim.fn.strdisplaywidth(list_lines[3]) == vim.fn.strdisplaywidth(list_lines[4]),
+  'handled title did not line up with the box')
+
 print('nvim-agent-comments picker tests passed')
 vim.cmd('qa!')

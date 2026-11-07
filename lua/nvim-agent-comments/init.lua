@@ -7,6 +7,7 @@ local editor = require('nvim-agent-comments.editor')
 local picker = require('nvim-agent-comments.picker')
 local root = require('nvim-agent-comments.root')
 local store = require('nvim-agent-comments.store')
+local style = require('nvim-agent-comments.style')
 local text_layout = require('nvim-agent-comments.text')
 
 local NAMESPACE = vim.api.nvim_create_namespace('nvim-agent-comments')
@@ -200,20 +201,19 @@ local function padded(line, width)
 end
 
 local function box_lines(comment, status, start_line, end_line, width)
-  local title_group = status == 'stale' and 'CommentBoxStale' or 'CommentBoxTitle'
-  local border_group = status == 'stale' and 'CommentBoxStaleBorder' or 'CommentBoxActiveBorder'
-  local label = status == 'stale' and 'Stale comment' or 'Comment'
+  local appearance = style.box(comment, status)
+  local label = appearance.label
   if start_line ~= end_line then label = ('%s · lines %d-%d'):format(label, start_line, end_line) end
   local top = '┌ ' .. label .. ' '
   local top_border = string.rep(BOX_BORDER, math.max(0, width - vim.fn.strdisplaywidth(top) - 1)) .. '┐'
-  local result = { { { top, title_group }, { top_border, border_group } } }
+  local result = { { { top, appearance.title_group }, { top_border, appearance.border_group } } }
   local body_width = math.max(1, width - 4)
   local body_lines = text_layout.wrap(comment.body, body_width)
   if #body_lines == 0 then body_lines = { '' } end
   for _, line in ipairs(body_lines) do
     result[#result + 1] = { { '│ ' .. padded(line, body_width) .. ' │', 'CommentBoxText' } }
   end
-  result[#result + 1] = { { '└' .. string.rep(BOX_BORDER, math.max(0, width - 2)) .. '┘', border_group } }
+  result[#result + 1] = { { '└' .. string.rep(BOX_BORDER, math.max(0, width - 2)) .. '┘', appearance.border_group } }
   return result
 end
 
@@ -228,7 +228,7 @@ end
 local function comment_lines(comment, status, start_line, end_line, width)
   local result = box_lines(comment, status, start_line, end_line, width)
   for _, reply in ipairs(comment.replies or {}) do reply_lines(reply, width, result) end
-  if #(comment.replies or {}) > 0 then result[#result + 1] = { { ' ', 'Normal' } } end
+  if style.handled(comment) then result[#result + 1] = { { ' ', 'Normal' } } end
   return result
 end
 
@@ -473,6 +473,8 @@ function M.setup(opts)
   vim.api.nvim_set_hl(0, 'CommentBoxStaleBorder', { fg = '#f85149', bg = '#0b0f14' })
   vim.api.nvim_set_hl(0, 'CommentBoxText', { fg = '#e6edf3', bg = '#111820' })
   vim.api.nvim_set_hl(0, 'CommentBoxTitle', { fg = '#58a6ff', bg = '#111820', bold = true })
+  vim.api.nvim_set_hl(0, 'CommentBoxHandledBorder', { fg = '#3fb950', bg = '#111820' })
+  vim.api.nvim_set_hl(0, 'CommentBoxHandledTitle', { fg = '#3fb950', bg = '#111820', bold = true })
   vim.api.nvim_set_hl(0, 'CommentBoxHint', { fg = '#8b949e', bg = '#111820' })
   vim.api.nvim_set_hl(0, 'CommentBoxSaved', { fg = '#3fb950', bg = '#0b0f14', bold = true })
   vim.api.nvim_set_hl(0, 'CommentBoxStale', { fg = '#f85149', bg = '#0b0f14', bold = true })

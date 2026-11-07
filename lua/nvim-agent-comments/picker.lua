@@ -1,5 +1,6 @@
 local M = {}
 
+local style = require('nvim-agent-comments.style')
 local text_layout = require('nvim-agent-comments.text')
 
 local BORDER = 'rounded'
@@ -10,6 +11,7 @@ local PADDING = 4
 local NAMESPACE = vim.api.nvim_create_namespace('nvim-agent-comments-picker')
 local BOX_MAX_WIDTH = 100
 local BOX_BORDER = '─'
+local BOX_CHROME_WIDTH = 6
 local SEARCH_HEIGHT = 12
 local SEARCH_PREFIX = ' ❯ '
 
@@ -29,8 +31,9 @@ local function item_lines(item)
   local body_width = math.min(BOX_MAX_WIDTH - 4, math.max(20, vim.fn.strdisplaywidth(item.comment.body)))
   local body = text_layout.truncate_display(item.comment.body, body_width)
   local padding = string.rep(' ', body_width - vim.fn.strdisplaywidth(body))
-  local top = '  ┌ Comment ' .. string.rep(BOX_BORDER, math.max(0, body_width - 7)) .. '┐'
-  lines[#lines + 1] = top
+  local top = '  ┌ ' .. style.box(item.comment, item.status).label .. ' '
+  local top_border = string.rep(BOX_BORDER, math.max(0, body_width + BOX_CHROME_WIDTH - vim.fn.strdisplaywidth(top) - 1))
+  lines[#lines + 1] = top .. top_border .. '┐'
   lines[#lines + 1] = '  │ ' .. body .. padding .. ' │'
   lines[#lines + 1] = '  └' .. string.rep(BOX_BORDER, body_width + 2) .. '┘'
   return lines
@@ -207,11 +210,10 @@ function M.open(items, on_select)
     if item.status == 'stale' then
       vim.api.nvim_buf_add_highlight(buffer, -1, 'CommentBoxStale', item_starts[index] - 1, 0, -1)
     end
-    local title_group = item.status == 'stale' and 'CommentBoxStale' or 'CommentBoxTitle'
-    local border_group = item.status == 'stale' and 'CommentBoxStaleBorder' or 'CommentBoxActiveBorder'
-    vim.api.nvim_buf_add_highlight(buffer, -1, title_group, comment_starts[index] - 1, 2, -1)
+    local appearance = style.box(item.comment, item.status)
+    vim.api.nvim_buf_add_highlight(buffer, -1, appearance.title_group, comment_starts[index] - 1, 2, -1)
     vim.api.nvim_buf_add_highlight(buffer, -1, 'CommentBoxText', comment_starts[index], 2, -1)
-    vim.api.nvim_buf_add_highlight(buffer, -1, border_group, comment_starts[index] + 1, 2, -1)
+    vim.api.nvim_buf_add_highlight(buffer, -1, appearance.border_group, comment_starts[index] + 1, 2, -1)
   end
   highlight(1)
 
