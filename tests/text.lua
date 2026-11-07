@@ -21,7 +21,15 @@ check_wrap('日本', 1, { '日', '本' }, 'width narrower than a character did n
 check_wrap('ab c', 1, { 'a', 'b', 'c' }, 'width 1 did not break every character')
 check_wrap('ab', 0, { 'a', 'b' }, 'width 0 did not make progress')
 
+check_wrap('e\204\129e\204\129', 1, { 'e\204\129', 'e\204\129' }, 'composing character was split from its base')
 assert(text_layout.truncate_display('日本語', 5) == '日本', 'truncate did not respect display width')
+
+local hrtime = (vim.uv or vim.loop).hrtime
+local started = hrtime()
+local long_word_lines = text_layout.wrap(string.rep('a', 20000), 75)
+local elapsed_seconds = (hrtime() - started) / 1e9
+assert(#long_word_lines == math.ceil(20000 / 75), 'long word was not broken into full-width pieces')
+assert(elapsed_seconds < 0.5, ('wrapping a long word took %.2f s'):format(elapsed_seconds))
 
 print('nvim-agent-comments text tests passed')
 vim.cmd('qa!')

@@ -2,19 +2,35 @@ local M = {}
 
 local MIN_WIDTH = 1
 
-function M.truncate_display(text, width)
-  local length = vim.fn.strchars(text)
-  while length > 0 and vim.fn.strdisplaywidth(vim.fn.strcharpart(text, 0, length)) > width do
-    length = length - 1
-  end
-  return vim.fn.strcharpart(text, 0, length)
+-- Splitting on \zs keeps composing characters attached to their base character.
+local function characters(text)
+  return vim.fn.split(text, [[\zs]])
 end
 
--- Takes at least one character so a character wider than the width still makes progress.
+function M.truncate_display(text, width)
+  local used, length = 0, 0
+  for _, character in ipairs(characters(text)) do
+    used = used + vim.fn.strdisplaywidth(character)
+    if used > width then break end
+    length = length + #character
+  end
+  return text:sub(1, length)
+end
+
+-- Each piece takes at least one character so a character wider than the width still makes progress.
 local function split_word(word, width)
-  local head = M.truncate_display(word, width)
-  if head == '' then head = vim.fn.strcharpart(word, 0, 1) end
-  return head, word:sub(#head + 1)
+  local pieces, piece, used = {}, {}, 0
+  for _, character in ipairs(characters(word)) do
+    local character_width = vim.fn.strdisplaywidth(character)
+    if used + character_width > width and #piece > 0 then
+      pieces[#pieces + 1] = table.concat(piece)
+      piece, used = {}, 0
+    end
+    piece[#piece + 1] = character
+    used = used + character_width
+  end
+  pieces[#pieces + 1] = table.concat(piece)
+  return pieces
 end
 
 local function wrap_paragraph(paragraph, width, lines)
@@ -25,12 +41,9 @@ local function wrap_paragraph(paragraph, width, lines)
       current = candidate
     else
       if current ~= '' then lines[#lines + 1] = current end
-      while vim.fn.strdisplaywidth(word) > width do
-        local head
-        head, word = split_word(word, width)
-        lines[#lines + 1] = head
-      end
-      current = word
+      local pieces = split_word(word, width)
+      for index = 1, #pieces - 1 do lines[#lines + 1] = pieces[index] end
+      current = pieces[#pieces]
     end
   end
   if current ~= '' then lines[#lines + 1] = current end
