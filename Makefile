@@ -1,4 +1,4 @@
-.PHONY: lint format test test-anchors test-diffview test-root test-storage test-retrieval test-workflow test-commands test-picker test-search test-editor test-text
+.PHONY: lint format test test-anchors test-diffview test-root test-storage test-retrieval test-workflow test-commands test-picker test-search test-editor test-text test-layout
 
 NVIM ?= nvim
 STYLUA ?= stylua
@@ -6,7 +6,7 @@ LUACHECK ?= luacheck
 
 TEST_FLAGS := --headless -u NONE
 
-test: test-anchors test-diffview test-root test-storage test-retrieval test-workflow test-commands test-picker test-search test-editor test-text
+test: test-anchors test-diffview test-root test-storage test-retrieval test-workflow test-commands test-picker test-search test-editor test-text test-layout
 
 test-anchors:
 	@$(NVIM) $(TEST_FLAGS) -l tests/anchors.lua
@@ -40,6 +40,9 @@ test-editor:
 
 test-text:
 	@$(NVIM) $(TEST_FLAGS) -l tests/text.lua
+
+test-layout:
+	@$(NVIM) $(TEST_FLAGS) -l tests/layout.lua
 
 lint:
 	$(STYLUA) --check lua tests

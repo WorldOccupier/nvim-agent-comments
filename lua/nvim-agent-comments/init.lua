@@ -22,6 +22,8 @@ local BOX_MARGIN = 1
 local BOX_MIN_WIDTH = 16
 local BOX_MAX_WIDTH = 100
 local BOX_BORDER = '─'
+-- The title row is '┌ ' .. label .. ' ' followed by at least the closing '┐'.
+local TITLE_CHROME_WIDTH = 4
 local STORE_POLL_MS = 300
 local RENDER_DEBOUNCE_MS = 100
 local REPLY_BORDER = '│'
@@ -204,7 +206,7 @@ local function box_lines(comment, status, start_line, end_line, width)
   local appearance = style.box(comment, status)
   local label = appearance.label
   if start_line ~= end_line then label = ('%s · lines %d-%d'):format(label, start_line, end_line) end
-  local top = '┌ ' .. label .. ' '
+  local top = '┌ ' .. text_layout.truncate_display(label, width - TITLE_CHROME_WIDTH) .. ' '
   local top_border = string.rep(BOX_BORDER, math.max(0, width - vim.fn.strdisplaywidth(top) - 1)) .. '┐'
   local result = { { { top, appearance.title_group }, { top_border, appearance.border_group } } }
   local body_width = math.max(1, width - 4)
