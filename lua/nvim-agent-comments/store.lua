@@ -20,13 +20,9 @@ local CACHE = {}
 
 M.VERSION = STORE_VERSION
 
-local function fail(message)
-  return nil, message
-end
+local function fail(message) return nil, message end
 
-local function is_positive_integer(value)
-  return type(value) == 'number' and value > 0 and value == math.floor(value)
-end
+local function is_positive_integer(value) return type(value) == 'number' and value > 0 and value == math.floor(value) end
 
 local function is_array(value)
   if type(value) ~= 'table' then return false end
@@ -49,23 +45,26 @@ local function validate_comment(comment, index)
       return fail(prefix .. '.' .. field .. ' must be a non-empty string')
     end
   end
-  if not is_positive_integer(comment.start_line) or not is_positive_integer(comment.end_line)
-      or comment.end_line < comment.start_line then
+  if
+    not is_positive_integer(comment.start_line)
+    or not is_positive_integer(comment.end_line)
+    or comment.end_line < comment.start_line
+  then
     return fail(prefix .. ' has an invalid line range')
   end
-  if not is_array(comment.context) then
-    return fail(prefix .. '.context must be an array')
-  end
-  if comment.context_start_offset ~= nil
-      and (type(comment.context_start_offset) ~= 'number'
-        or comment.context_start_offset < ZERO
-        or comment.context_start_offset ~= math.floor(comment.context_start_offset)) then
+  if not is_array(comment.context) then return fail(prefix .. '.context must be an array') end
+  if
+    comment.context_start_offset ~= nil
+    and (
+      type(comment.context_start_offset) ~= 'number'
+      or comment.context_start_offset < ZERO
+      or comment.context_start_offset ~= math.floor(comment.context_start_offset)
+    )
+  then
     return fail(prefix .. '.context_start_offset must be a non-negative integer')
   end
   for context_index, line in ipairs(comment.context) do
-    if type(line) ~= 'string' then
-      return fail(('%s.context[%d] must be a string'):format(prefix, context_index))
-    end
+    if type(line) ~= 'string' then return fail(('%s.context[%d] must be a string'):format(prefix, context_index)) end
   end
   if comment.replies ~= nil then
     if not is_array(comment.replies) then return fail(prefix .. '.replies must be an array') end
@@ -75,28 +74,26 @@ local function validate_comment(comment, index)
       if type(reply.body) ~= 'string' or reply.body == EMPTY_STRING then
         return fail(reply_prefix .. '.body must be a non-empty string')
       end
-      if reply.created_at ~= nil
-          and (type(reply.created_at) ~= 'string' or reply.created_at == EMPTY_STRING) then
+      if reply.created_at ~= nil and (type(reply.created_at) ~= 'string' or reply.created_at == EMPTY_STRING) then
         return fail(reply_prefix .. '.created_at must be a non-empty string when present')
       end
     end
   end
-  if comment.status ~= anchors.STATUS_ANCHORED and comment.status ~= anchors.STATUS_STALE
-      and comment.status ~= LEGACY_STATUS_ANCHORED then
+  if
+    comment.status ~= anchors.STATUS_ANCHORED
+    and comment.status ~= anchors.STATUS_STALE
+    and comment.status ~= LEGACY_STATUS_ANCHORED
+  then
     return fail(prefix .. '.status must be anchored or stale')
   end
   return true
 end
 
-function M.empty()
-  return { version = M.VERSION, comments = {} }
-end
+function M.empty() return { version = M.VERSION, comments = {} } end
 
 function M.validate(store)
   if type(store) ~= 'table' then return fail('store must be an object') end
-  if store.version ~= M.VERSION then
-    return fail(('unsupported store version: %s'):format(tostring(store.version)))
-  end
+  if store.version ~= M.VERSION then return fail(('unsupported store version: %s'):format(tostring(store.version))) end
   if not is_array(store.comments) then return fail('store.comments must be an array') end
 
   local ids = {}
@@ -128,7 +125,10 @@ function M.signature(path)
   local stat = uv.fs_stat(path)
   if not stat then return nil end
   return table.concat({
-    stat.ino or 0, stat.size or 0, stat.mtime and stat.mtime.sec or 0, stat.mtime and stat.mtime.nsec or 0,
+    stat.ino or 0,
+    stat.size or 0,
+    stat.mtime and stat.mtime.sec or 0,
+    stat.mtime and stat.mtime.nsec or 0,
   }, ':')
 end
 
@@ -192,14 +192,15 @@ function M.new_id(store)
     id = ID_FORMAT:format(os.time(), math.random(0, RANDOM_MAX))
     local found = false
     for _, comment in ipairs(store.comments) do
-      if comment.id == id then found = true break end
+      if comment.id == id then
+        found = true
+        break
+      end
     end
   until not found
   return id
 end
 
-function M.timestamp()
-  return os.date(UTC_TIMESTAMP_FORMAT)
-end
+function M.timestamp() return os.date(UTC_TIMESTAMP_FORMAT) end
 
 return M

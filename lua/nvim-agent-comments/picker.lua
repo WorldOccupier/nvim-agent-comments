@@ -21,8 +21,7 @@ local function close(window, buffer)
 end
 
 local function item_lines(item)
-  local location = item.line == item.end_line and tostring(item.line)
-      or ('%d-%d'):format(item.line, item.end_line)
+  local location = item.line == item.end_line and tostring(item.line) or ('%d-%d'):format(item.line, item.end_line)
   local lines = { (':%s%s'):format(location, item.status == 'stale' and ' [stale]' or '') }
   for _, context in ipairs(item.context) do
     lines[#lines + 1] = ('  %4d  %s'):format(context.line, context.text)
@@ -32,16 +31,15 @@ local function item_lines(item)
   local body = text_layout.truncate_display(item.comment.body, body_width)
   local padding = string.rep(' ', body_width - vim.fn.strdisplaywidth(body))
   local top = '  ┌ ' .. style.box(item.comment, item.status).label .. ' '
-  local top_border = string.rep(BOX_BORDER, math.max(0, body_width + BOX_CHROME_WIDTH - vim.fn.strdisplaywidth(top) - 1))
+  local top_border =
+    string.rep(BOX_BORDER, math.max(0, body_width + BOX_CHROME_WIDTH - vim.fn.strdisplaywidth(top) - 1))
   lines[#lines + 1] = top .. top_border .. '┐'
   lines[#lines + 1] = '  │ ' .. body .. padding .. ' │'
   lines[#lines + 1] = '  └' .. string.rep(BOX_BORDER, body_width + 2) .. '┘'
   return lines
 end
 
-local function prompt_query(line)
-  return vim.trim((line or ''):gsub('^%s*❯%s*', '', 1))
-end
+local function prompt_query(line) return vim.trim((line or ''):gsub('^%s*❯%s*', '', 1)) end
 
 function M.filter(items, query)
   query = vim.trim(query or ''):lower()
@@ -65,8 +63,15 @@ function M.search(items, on_select)
   vim.bo[results_buffer].buftype = 'nofile'
   vim.bo[results_buffer].bufhidden = 'wipe'
   local results_window = vim.api.nvim_open_win(results_buffer, false, {
-    relative = 'editor', row = results_row, col = col, width = width, height = results_height,
-    border = BORDER, style = 'minimal', title = ' Results ', title_pos = 'left',
+    relative = 'editor',
+    row = results_row,
+    col = col,
+    width = width,
+    height = results_height,
+    border = BORDER,
+    style = 'minimal',
+    title = ' Results ',
+    title_pos = 'left',
   })
   vim.wo[results_window].wrap = false
   vim.wo[results_window].winhl = 'Normal:CommentPicker,FloatBorder:CommentBoxActiveBorder,FloatTitle:CommentBoxTitle'
@@ -76,9 +81,15 @@ function M.search(items, on_select)
   vim.bo[prompt_buffer].bufhidden = 'wipe'
   vim.fn.prompt_setprompt(prompt_buffer, SEARCH_PREFIX)
   local prompt_window = vim.api.nvim_open_win(prompt_buffer, true, {
-    relative = 'editor', row = results_row + results_height + 2, col = col,
-    width = width, height = 1, border = BORDER, style = 'minimal',
-    title = ' Search comments ', title_pos = 'left',
+    relative = 'editor',
+    row = results_row + results_height + 2,
+    col = col,
+    width = width,
+    height = 1,
+    border = BORDER,
+    style = 'minimal',
+    title = ' Search comments ',
+    title_pos = 'left',
   })
   vim.wo[prompt_window].winhl = 'Normal:CommentPicker,FloatBorder:CommentBoxActiveBorder,FloatTitle:CommentBoxTitle'
 
@@ -89,8 +100,7 @@ function M.search(items, on_select)
     selected = math.max(1, math.min(selected, #matches))
     local lines = {}
     for _, item in ipairs(matches) do
-      local location = item.line == item.end_line and tostring(item.line)
-          or ('%d-%d'):format(item.line, item.end_line)
+      local location = item.line == item.end_line and tostring(item.line) or ('%d-%d'):format(item.line, item.end_line)
       local stale = item.status == 'stale' and ' [stale]' or ''
       lines[#lines + 1] = (' %s:%s%s  %s'):format(item.path, location, stale, item.comment.body)
     end
@@ -101,7 +111,8 @@ function M.search(items, on_select)
     vim.api.nvim_buf_clear_namespace(results_buffer, NAMESPACE, 0, -1)
     if #matches > 0 then
       vim.api.nvim_buf_set_extmark(results_buffer, NAMESPACE, selected - 1, 0, {
-        hl_eol = true, line_hl_group = 'CommentPickerSelected',
+        hl_eol = true,
+        line_hl_group = 'CommentPickerSelected',
       })
       vim.api.nvim_win_set_cursor(results_window, { selected, 0 })
     end
@@ -217,9 +228,7 @@ function M.open(items, on_select)
   end
   highlight(1)
 
-  local function move(step)
-    highlight(math.max(1, math.min(#items, selected + step)))
-  end
+  local function move(step) highlight(math.max(1, math.min(#items, selected + step))) end
   local function cancel() close(window, buffer) end
   local function submit()
     local item = items[selected]

@@ -3,9 +3,7 @@ local M = {}
 local MIN_WIDTH = 1
 
 -- Splitting on \zs keeps composing characters attached to their base character.
-local function characters(text)
-  return vim.fn.split(text, [[\zs]])
-end
+local function characters(text) return vim.fn.split(text, [[\zs]]) end
 
 function M.truncate_display(text, width)
   local used, length = 0, 0
@@ -42,7 +40,9 @@ local function wrap_paragraph(paragraph, width, lines)
     else
       if current ~= '' then lines[#lines + 1] = current end
       local pieces = split_word(word, width)
-      for index = 1, #pieces - 1 do lines[#lines + 1] = pieces[index] end
+      for index = 1, #pieces - 1 do
+        lines[#lines + 1] = pieces[index]
+      end
       current = pieces[#pieces]
     end
   end

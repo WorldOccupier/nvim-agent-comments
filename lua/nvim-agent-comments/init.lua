@@ -28,7 +28,8 @@ local STORE_POLL_MS = 300
 local RENDER_DEBOUNCE_MS = 100
 local REPLY_BORDER = '│'
 local REPLY_PREFIX = REPLY_BORDER .. ' ↳ Agent: '
-local REPLY_INDENT = REPLY_BORDER .. string.rep(' ', vim.fn.strdisplaywidth(REPLY_PREFIX) - vim.fn.strdisplaywidth(REPLY_BORDER))
+local REPLY_INDENT = REPLY_BORDER
+  .. string.rep(' ', vim.fn.strdisplaywidth(REPLY_PREFIX) - vim.fn.strdisplaywidth(REPLY_BORDER))
 local WATCHERS = {}
 local RENDER_TIMERS = {}
 local RENDERED_WIDTHS = {}
@@ -54,9 +55,7 @@ end
 local function project_comment_lines(project_root, relative)
   local filename = project_root .. '/' .. relative
   local bufnr = vim.fn.bufnr(filename)
-  if bufnr ~= -1 and vim.api.nvim_buf_is_loaded(bufnr) then
-    return vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
-  end
+  if bufnr ~= -1 and vim.api.nvim_buf_is_loaded(bufnr) then return vim.api.nvim_buf_get_lines(bufnr, 0, -1, false) end
   if not uv.fs_stat(filename) then return nil end
   local ok, lines = pcall(vim.fn.readfile, filename)
   return ok and lines or nil
@@ -174,9 +173,13 @@ local function render_debounced(bufnr)
     RENDER_TIMERS[bufnr] = timer
   end
   timer:stop()
-  timer:start(RENDER_DEBOUNCE_MS, 0, vim.schedule_wrap(function()
-    if vim.api.nvim_buf_is_loaded(bufnr) then M.render(bufnr) end
-  end))
+  timer:start(
+    RENDER_DEBOUNCE_MS,
+    0,
+    vim.schedule_wrap(function()
+      if vim.api.nvim_buf_is_loaded(bufnr) then M.render(bufnr) end
+    end)
+  )
 end
 
 local function stop_render_timer(bufnr)
@@ -187,9 +190,10 @@ local function stop_render_timer(bufnr)
 end
 
 local function box_width(bufnr)
-  local windows = vim.tbl_filter(function(window)
-    return vim.api.nvim_win_get_config(window).relative == ''
-  end, vim.fn.win_findbuf(bufnr))
+  local windows = vim.tbl_filter(
+    function(window) return vim.api.nvim_win_get_config(window).relative == '' end,
+    vim.fn.win_findbuf(bufnr)
+  )
   if #windows == 0 then windows = { vim.api.nvim_get_current_win() } end
   local available = vim.o.columns
   for _, window in ipairs(windows) do
@@ -199,9 +203,7 @@ local function box_width(bufnr)
   return math.max(BOX_MIN_WIDTH, math.min(BOX_MAX_WIDTH, available - BOX_MARGIN))
 end
 
-local function padded(line, width)
-  return line .. string.rep(' ', math.max(0, width - vim.fn.strdisplaywidth(line)))
-end
+local function padded(line, width) return line .. string.rep(' ', math.max(0, width - vim.fn.strdisplaywidth(line))) end
 
 local function box_lines(comment, status, start_line, end_line, width)
   local appearance = style.box(comment, status)
@@ -216,7 +218,8 @@ local function box_lines(comment, status, start_line, end_line, width)
   for _, line in ipairs(body_lines) do
     result[#result + 1] = { { '│ ' .. padded(line, body_width) .. ' │', 'CommentBoxText' } }
   end
-  result[#result + 1] = { { '└' .. string.rep(BOX_BORDER, math.max(0, width - 2)) .. '┘', appearance.border_group } }
+  result[#result + 1] =
+    { { '└' .. string.rep(BOX_BORDER, math.max(0, width - 2)) .. '┘', appearance.border_group } }
   return result
 end
 
@@ -230,7 +233,9 @@ end
 
 local function comment_lines(comment, status, start_line, end_line, width)
   local result = box_lines(comment, status, start_line, end_line, width)
-  for _, reply in ipairs(comment.replies or {}) do reply_lines(reply, width, result) end
+  for _, reply in ipairs(comment.replies or {}) do
+    reply_lines(reply, width, result)
+  end
   if style.handled(comment) then result[#result + 1] = { { ' ', 'Normal' } } end
   return result
 end
@@ -262,8 +267,7 @@ local function place_signs(bufnr, entry, line_count)
     if status == 'stale' then
       sign = STALE_SIGN
     elseif range_start ~= range_end then
-      sign = line == range_start and RANGE_START_SIGN
-          or line == range_end and RANGE_END_SIGN or RANGE_MIDDLE_SIGN
+      sign = line == range_start and RANGE_START_SIGN or line == range_end and RANGE_END_SIGN or RANGE_MIDDLE_SIGN
     end
     vim.api.nvim_buf_set_extmark(bufnr, NAMESPACE, line - 1, 0, {
       sign_text = sign,
@@ -336,13 +340,9 @@ local function open_project_picker(bufnr, open_picker, jump_to_end)
   end)
 end
 
-function M.list(bufnr)
-  open_project_picker(bufnr, picker.open)
-end
+function M.list(bufnr) open_project_picker(bufnr, picker.open) end
 
-function M.search(bufnr)
-  open_project_picker(bufnr, picker.search, true)
-end
+function M.search(bufnr) open_project_picker(bufnr, picker.search, true) end
 
 function M.add(start_line, end_line, bufnr)
   bufnr = bufnr or 0
@@ -351,38 +351,48 @@ function M.add(start_line, end_line, bufnr)
   if vim.bo[source.target_bufnr].readonly then return vim.notify('buffer is readonly', vim.log.levels.ERROR) end
   local project_root, path = project(source.target_bufnr)
   if not project_root then return vim.notify(path, vim.log.levels.ERROR) end
-  editor.open({ bufnr = bufnr, end_line = end_line, title = ('Comment lines %d-%d'):format(start_line, end_line) }, function(body)
-    if not vim.api.nvim_buf_is_valid(bufnr) or not vim.api.nvim_buf_is_valid(source.target_bufnr) then
-      return vim.notify('comment target closed before submission', vim.log.levels.ERROR)
+  editor.open(
+    { bufnr = bufnr, end_line = end_line, title = ('Comment lines %d-%d'):format(start_line, end_line) },
+    function(body)
+      if not vim.api.nvim_buf_is_valid(bufnr) or not vim.api.nvim_buf_is_valid(source.target_bufnr) then
+        return vim.notify('comment target closed before submission', vim.log.levels.ERROR)
+      end
+      local mapped_start, mapped_end, map_err =
+        diffview.map_range(bufnr, source.target_bufnr, start_line, end_line, M.config.context_lines)
+      if not mapped_start then return vim.notify(map_err, vim.log.levels.ERROR) end
+      local current_lines = vim.api.nvim_buf_get_lines(source.target_bufnr, 0, -1, false)
+      local current = anchors.capture(current_lines, mapped_start, mapped_end, M.config.context_lines)
+      local comments = assert(store.load(path, { fresh = true }))
+      local now = store.timestamp()
+      comments.comments[#comments.comments + 1] = {
+        id = store.new_id(comments),
+        path = assert(root.relative(project_root, source.filename)),
+        start_line = mapped_start,
+        end_line = mapped_end,
+        context = current.context,
+        context_start_offset = current.context_start_offset,
+        body = body,
+        replies = {},
+        created_at = now,
+        updated_at = now,
+        status = anchors.STATUS_ANCHORED,
+      }
+      local ok, err = store.save(path, comments)
+      if not ok then return vim.notify(err, vim.log.levels.ERROR) end
+      M.render(source.target_bufnr)
+      if bufnr ~= source.target_bufnr and vim.api.nvim_buf_is_valid(bufnr) then M.render(bufnr) end
     end
-    local mapped_start, mapped_end, map_err = diffview.map_range(
-      bufnr, source.target_bufnr, start_line, end_line, M.config.context_lines
-    )
-    if not mapped_start then return vim.notify(map_err, vim.log.levels.ERROR) end
-    local current_lines = vim.api.nvim_buf_get_lines(source.target_bufnr, 0, -1, false)
-    local current = anchors.capture(current_lines, mapped_start, mapped_end, M.config.context_lines)
-    local comments = assert(store.load(path, { fresh = true }))
-    local now = store.timestamp()
-    comments.comments[#comments.comments + 1] = {
-      id = store.new_id(comments), path = assert(root.relative(project_root, source.filename)),
-      start_line = mapped_start, end_line = mapped_end, context = current.context,
-      context_start_offset = current.context_start_offset, body = body, replies = {},
-      created_at = now, updated_at = now, status = anchors.STATUS_ANCHORED,
-    }
-    local ok, err = store.save(path, comments)
-    if not ok then return vim.notify(err, vim.log.levels.ERROR) end
-    M.render(source.target_bufnr)
-    if bufnr ~= source.target_bufnr and vim.api.nvim_buf_is_valid(bufnr) then M.render(bufnr) end
-  end)
+  )
 end
 
 local function candidates_at(bufnr)
   local entries, err, path = comments_in_buffer(bufnr)
   if not entries then return nil, err end
   local cursor_line = vim.fn.line('.')
-  local candidates = vim.tbl_filter(function(entry)
-    return cursor_line >= entry.start_line and cursor_line <= entry.end_line
-  end, entries)
+  local candidates = vim.tbl_filter(
+    function(entry) return cursor_line >= entry.start_line and cursor_line <= entry.end_line end,
+    entries
+  )
   return candidates, nil, path
 end
 
@@ -414,12 +424,15 @@ function M.edit_at(bufnr)
   if err then return vim.notify(err, vim.log.levels.ERROR) end
   choose_candidate(candidates, 'Edit comment', function(item)
     if not item then return end
-    editor.open({ bufnr = bufnr, end_line = item.comment.end_line, initial = item.comment.body, title = 'Edit comment' }, function(body)
-      update_comment(bufnr, path, item.comment.id, function(comments, index)
-        comments[index].body = body
-        comments[index].updated_at = store.timestamp()
-      end)
-    end)
+    editor.open(
+      { bufnr = bufnr, end_line = item.comment.end_line, initial = item.comment.body, title = 'Edit comment' },
+      function(body)
+        update_comment(bufnr, path, item.comment.id, function(comments, index)
+          comments[index].body = body
+          comments[index].updated_at = store.timestamp()
+        end)
+      end
+    )
   end)
 end
 
@@ -437,18 +450,26 @@ function M.navigate(direction, bufnr)
   local entries, err = comments_in_buffer(bufnr)
   if not entries then return vim.notify(err, vim.log.levels.ERROR) end
   local anchors_in_file = {}
-  for _, entry in ipairs(entries) do anchors_in_file[#anchors_in_file + 1] = entry.start_line end
+  for _, entry in ipairs(entries) do
+    anchors_in_file[#anchors_in_file + 1] = entry.start_line
+  end
   if #anchors_in_file == 0 then return vim.notify('no comments in the current file', vim.log.levels.INFO) end
   table.sort(anchors_in_file)
   local cursor_line = vim.api.nvim_win_get_cursor(0)[1]
   local target = direction > 0 and anchors_in_file[1] or anchors_in_file[#anchors_in_file]
   if direction > 0 then
     for _, line in ipairs(anchors_in_file) do
-      if line > cursor_line then target = line break end
+      if line > cursor_line then
+        target = line
+        break
+      end
     end
   else
     for index = #anchors_in_file, 1, -1 do
-      if anchors_in_file[index] < cursor_line then target = anchors_in_file[index] break end
+      if anchors_in_file[index] < cursor_line then
+        target = anchors_in_file[index]
+        break
+      end
     end
   end
   local line_count = vim.api.nvim_buf_line_count(bufnr)
@@ -511,7 +532,11 @@ function M.setup(opts)
   vim.api.nvim_set_hl(0, 'CommentPicker', { fg = '#e6edf3', bg = '#111820' })
   vim.api.nvim_set_hl(0, 'CommentPickerSelected', { fg = '#e6edf3', bg = '#17263a' })
   M.config = vim.tbl_deep_extend('force', M.config, opts or {})
-  vim.api.nvim_create_user_command('NvimAgentCommentsAdd', function() M.add(vim.fn.line('.'), vim.fn.line('.')) end, { force = true })
+  vim.api.nvim_create_user_command(
+    'NvimAgentCommentsAdd',
+    function() M.add(vim.fn.line('.'), vim.fn.line('.')) end,
+    { force = true }
+  )
   vim.api.nvim_create_user_command('NvimAgentCommentsDelete', function() M.delete_at(0) end, { force = true })
   vim.api.nvim_create_user_command('NvimAgentCommentsEdit', function() M.edit_at(0) end, { force = true })
   vim.api.nvim_create_user_command('NvimAgentCommentsJump', function() M.jump_at(0) end, { force = true })
@@ -519,16 +544,20 @@ function M.setup(opts)
   vim.api.nvim_create_user_command('NvimAgentCommentsNext', function() M.navigate(1, 0) end, { force = true })
   vim.api.nvim_create_user_command('NvimAgentCommentsPrev', function() M.navigate(-1, 0) end, { force = true })
   vim.api.nvim_create_user_command('NvimAgentCommentsSearch', function() M.search(0) end, { force = true })
-  vim.api.nvim_create_user_command('NvimAgentCommentsReanchor', function(args)
-    M.reanchor(tonumber(args.line1), tonumber(args.line2), 0)
-  end, { range = true, force = true })
+  vim.api.nvim_create_user_command(
+    'NvimAgentCommentsReanchor',
+    function(args) M.reanchor(tonumber(args.line1), tonumber(args.line2), 0) end,
+    { range = true, force = true }
+  )
   vim.api.nvim_create_user_command('NvimAgentCommentsRetrieve', function(args)
     local ok, err = cli.run({ bufnr = 0, path = args.args, store_name = M.config.store_name })
     if not ok then error(err) end
   end, { nargs = '?', complete = 'file', force = true })
-  vim.api.nvim_create_user_command('NvimAgentCommentsAddVisual', function(args)
-    M.add(tonumber(args.line1), tonumber(args.line2))
-  end, { range = true, force = true })
+  vim.api.nvim_create_user_command(
+    'NvimAgentCommentsAddVisual',
+    function(args) M.add(tonumber(args.line1), tonumber(args.line2)) end,
+    { range = true, force = true }
+  )
   local group = vim.api.nvim_create_augroup('NvimAgentComments', { clear = true })
   vim.api.nvim_create_autocmd({ 'BufEnter', 'BufWritePost', 'TextChanged' }, {
     group = group,
@@ -556,7 +585,9 @@ function M.setup(opts)
   end
   if type(M.config.keymaps) == 'table' then
     for mode, mappings in pairs(M.config.keymaps) do
-      for lhs, rhs in pairs(mappings) do vim.keymap.set(mode, lhs, rhs, { desc = 'nvim-agent-comments' }) end
+      for lhs, rhs in pairs(mappings) do
+        vim.keymap.set(mode, lhs, rhs, { desc = 'nvim-agent-comments' })
+      end
     end
   end
   M.render(0)

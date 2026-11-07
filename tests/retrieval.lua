@@ -3,9 +3,7 @@ vim.opt.rtp:prepend(vim.fn.getcwd())
 local cli = require('nvim-agent-comments.cli')
 local store = require('nvim-agent-comments.store')
 
-local function check(condition, message)
-  assert(condition, message)
-end
+local function check(condition, message) assert(condition, message) end
 
 local directory = vim.fn.tempname()
 vim.fn.mkdir(directory .. '/.git', 'p')
@@ -16,14 +14,28 @@ local value = store.empty()
 local now = store.timestamp()
 value.comments = {
   {
-    id = 'c_resolved', path = 'lua/example.lua', start_line = 2, end_line = 2,
-    context = { 'before', 'target', 'after' }, context_start_offset = 1,
-    body = 'Resolved body', created_at = now, updated_at = now, status = 'anchored',
+    id = 'c_resolved',
+    path = 'lua/example.lua',
+    start_line = 2,
+    end_line = 2,
+    context = { 'before', 'target', 'after' },
+    context_start_offset = 1,
+    body = 'Resolved body',
+    created_at = now,
+    updated_at = now,
+    status = 'anchored',
   },
   {
-    id = 'c_missing', path = 'lua/missing.lua', start_line = 4, end_line = 4,
-    context = { 'gone' }, context_start_offset = 0,
-    body = 'Missing body', created_at = now, updated_at = now, status = 'anchored',
+    id = 'c_missing',
+    path = 'lua/missing.lua',
+    start_line = 4,
+    end_line = 4,
+    context = { 'gone' },
+    context_start_offset = 0,
+    body = 'Missing body',
+    created_at = now,
+    updated_at = now,
+    status = 'anchored',
   },
 }
 assert(store.save(directory .. '/.nvim-agent-comments.json', value))

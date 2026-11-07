@@ -2,9 +2,7 @@ local M = {}
 
 local anchors = require('nvim-agent-comments.anchors')
 
-local function lines(bufnr)
-  return vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
-end
+local function lines(bufnr) return vim.api.nvim_buf_get_lines(bufnr, 0, -1, false) end
 
 local function same_lines(left, right)
   if #left ~= #right then return false end

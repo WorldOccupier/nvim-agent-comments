@@ -14,9 +14,7 @@ local function normalize_filter(path)
 
   local parts = {}
   for part in path:gmatch('[^/]+') do
-    if part == '..' then
-      return nil, 'comment path filter cannot escape the project root'
-    end
+    if part == '..' then return nil, 'comment path filter cannot escape the project root' end
     if part ~= '.' and part ~= '' then parts[#parts + 1] = part end
   end
   if #parts == 0 then return nil, 'comment path filter must name a file' end
@@ -48,10 +46,11 @@ local function retrieval_comment(comment, project_root)
 
   local lines, read_err = read_lines(project_root .. '/' .. safe_path)
   if read_err then return nil, read_err end
-  local resolved = lines and anchors.resolve(lines, comment) or {
-    status = 'stale',
-    reason = 'commented file does not exist',
-  }
+  local resolved = lines and anchors.resolve(lines, comment)
+    or {
+      status = 'stale',
+      reason = 'commented file does not exist',
+    }
   result.status = resolved.status
   if resolved.start_line then result.resolved_start_line = resolved.start_line end
   if resolved.end_line then result.resolved_end_line = resolved.end_line end

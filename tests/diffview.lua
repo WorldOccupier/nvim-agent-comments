@@ -1,8 +1,6 @@
 vim.opt.rtp:prepend(vim.fn.getcwd())
 
-local function check(condition, message)
-  assert(condition, message)
-end
+local function check(condition, message) assert(condition, message) end
 
 local directory = vim.fn.tempname()
 vim.fn.mkdir(directory, 'p')
@@ -29,7 +27,10 @@ package.loaded['diffview.lib'] = { get_current_view = function() return { cur_la
 
 local resolved = assert(diffview.resolve(display, 3, 3, 1))
 check(resolved.filename == filename, 'Diffview file did not resolve to its actual path')
-check(resolved.target_bufnr == target and resolved.start_line == 2, 'Diffview range did not resolve to the actual buffer')
+check(
+  resolved.target_bufnr == target and resolved.start_line == 2,
+  'Diffview range did not resolve to the actual buffer'
+)
 
 window.file.rev.type = RevType.COMMIT
 local rejected, commit_err = diffview.resolve(display, 3, 3, 1)

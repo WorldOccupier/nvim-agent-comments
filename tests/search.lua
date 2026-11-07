@@ -18,11 +18,20 @@ local captured = anchors.capture(lines, 2, 4, 1)
 local timestamp = store.timestamp()
 assert(store.save(directory .. '/.nvim-agent-comments.json', {
   version = 1,
-  comments = { {
-    id = 'c_search_range', path = 'example.lua', start_line = 2, end_line = 4,
-    context = captured.context, context_start_offset = captured.context_start_offset,
-    body = 'visual comment', created_at = timestamp, updated_at = timestamp, status = 'anchored',
-  } },
+  comments = {
+    {
+      id = 'c_search_range',
+      path = 'example.lua',
+      start_line = 2,
+      end_line = 4,
+      context = captured.context,
+      context_start_offset = captured.context_start_offset,
+      body = 'visual comment',
+      created_at = timestamp,
+      updated_at = timestamp,
+      status = 'anchored',
+    },
+  },
 }))
 
 vim.cmd('edit ' .. vim.fn.fnameescape(filename))

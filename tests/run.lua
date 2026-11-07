@@ -6,9 +6,7 @@ local TARGET_LINE = 18
 local SINGLE_LINE = 18
 local MISSING_SUFFIX = '.missing'
 
-local function check(condition, message)
-  assert(condition, message)
-end
+local function check(condition, message) assert(condition, message) end
 
 local project_root, root_err = root.find(vim.fn.getcwd() .. '/README.md')
 check(project_root ~= nil, root_err)

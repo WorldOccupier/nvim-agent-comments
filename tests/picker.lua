@@ -32,9 +32,11 @@ for _, buffer in ipairs(vim.api.nvim_list_bufs()) do
 end
 assert(prompt_buffer, 'search did not create a prompt buffer')
 assert(results_buffer, 'search did not create a results buffer')
-assert(#vim.api.nvim_buf_get_lines(results_buffer, 0, -1, false) == 1
-  and vim.api.nvim_buf_get_lines(results_buffer, 0, -1, false)[1] == '',
-  'search showed suggestions before a query')
+assert(
+  #vim.api.nvim_buf_get_lines(results_buffer, 0, -1, false) == 1
+    and vim.api.nvim_buf_get_lines(results_buffer, 0, -1, false)[1] == '',
+  'search showed suggestions before a query'
+)
 vim.api.nvim_buf_set_lines(prompt_buffer, 0, -1, false, { ' ❯ timeout' })
 vim.api.nvim_exec_autocmds('TextChangedI', { buffer = prompt_buffer })
 local result_lines = vim.api.nvim_buf_get_lines(results_buffer, 0, -1, false)
@@ -46,8 +48,10 @@ items[1].comment.replies = { { body = 'Done' } }
 picker.open({ items[1] }, function() end)
 local list_lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
 assert(list_lines[3]:find('┌ ✓ Comment', 1, true), 'list did not mark the handled comment')
-assert(vim.fn.strdisplaywidth(list_lines[3]) == vim.fn.strdisplaywidth(list_lines[4]),
-  'handled title did not line up with the box')
+assert(
+  vim.fn.strdisplaywidth(list_lines[3]) == vim.fn.strdisplaywidth(list_lines[4]),
+  'handled title did not line up with the box'
+)
 
 print('nvim-agent-comments picker tests passed')
 vim.cmd('qa!')

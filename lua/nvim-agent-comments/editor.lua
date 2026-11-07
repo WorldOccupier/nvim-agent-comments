@@ -68,9 +68,7 @@ local function close(state)
   if state.buffer and vim.api.nvim_buf_is_valid(state.buffer) then
     vim.api.nvim_buf_delete(state.buffer, { force = true })
   end
-  if state.backdrop and vim.api.nvim_win_is_valid(state.backdrop) then
-    vim.api.nvim_win_close(state.backdrop, true)
-  end
+  if state.backdrop and vim.api.nvim_win_is_valid(state.backdrop) then vim.api.nvim_win_close(state.backdrop, true) end
   if state.backdrop_buffer and vim.api.nvim_buf_is_valid(state.backdrop_buffer) then
     vim.api.nvim_buf_delete(state.backdrop_buffer, { force = true })
   end
@@ -177,7 +175,12 @@ function M.open(opts, on_submit)
     end,
   })
 
-  vim.keymap.set({ INSERT_MODE, NORMAL_MODE }, SUBMIT_KEY, function() submit(state) end, { buffer = buffer, nowait = true, })
+  vim.keymap.set(
+    { INSERT_MODE, NORMAL_MODE },
+    SUBMIT_KEY,
+    function() submit(state) end,
+    { buffer = buffer, nowait = true }
+  )
   vim.keymap.set(NORMAL_MODE, BACKSPACE_KEY, function()
     local cursor = vim.api.nvim_win_get_cursor(window)
     if cursor[1] ~= INPUT_LINE or cursor[2] <= #INPUT_PREFIX then return '' end

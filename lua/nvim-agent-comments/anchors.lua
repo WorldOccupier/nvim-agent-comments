@@ -18,9 +18,7 @@ end
 
 local function equal_lines(lines, start_line, context)
   for offset, expected in ipairs(context) do
-    if lines[start_line + offset - 1] ~= expected then
-      return false
-    end
+    if lines[start_line + offset - 1] ~= expected then return false end
   end
   return true
 end
@@ -38,15 +36,11 @@ end
 
 function M.resolve(lines, comment)
   local context = comment.context or {}
-  if #context == NO_MATCHES then
-    return { status = M.STATUS_STALE, reason = 'comment has no context' }
-  end
+  if #context == NO_MATCHES then return { status = M.STATUS_STALE, reason = 'comment has no context' } end
 
   local matches = {}
   for start_line = FIRST_LINE, #lines - #context + FIRST_LINE do
-    if equal_lines(lines, start_line, context) then
-      matches[#matches + 1] = start_line
-    end
+    if equal_lines(lines, start_line, context) then matches[#matches + 1] = start_line end
   end
 
   if #matches ~= 1 then

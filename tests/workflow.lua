@@ -24,9 +24,7 @@ local anchors = require('nvim-agent-comments.anchors')
 local cli = require('nvim-agent-comments.cli')
 local store = require('nvim-agent-comments.store')
 
-local function check(condition, message)
-  assert(condition, message)
-end
+local function check(condition, message) assert(condition, message) end
 
 local directory = vim.fn.tempname()
 vim.fn.mkdir(directory .. '/.git', 'p')
@@ -90,7 +88,9 @@ local function rendered_box()
 end
 local function line_text(virtual_line)
   local text = ''
-  for _, chunk in ipairs(virtual_line) do text = text .. chunk[1] end
+  for _, chunk in ipairs(virtual_line) do
+    text = text .. chunk[1]
+  end
   return text
 end
 local function box_rows(virtual_lines)
@@ -176,7 +176,9 @@ comments.render = function(...)
   render_calls = render_calls + 1
   return render(...)
 end
-for _ = 1, 3 do vim.api.nvim_exec_autocmds('TextChangedI', { buffer = vim.api.nvim_get_current_buf() }) end
+for _ = 1, 3 do
+  vim.api.nvim_exec_autocmds('TextChangedI', { buffer = vim.api.nvim_get_current_buf() })
+end
 check(render_calls == 0, 'insert-mode changes rendered before the debounce delay')
 check(vim.wait(1000, function() return render_calls > 0 end, 10), 'insert-mode changes never rendered')
 vim.wait(200)
@@ -212,7 +214,10 @@ vim.cmd('write')
 retrieved = assert(cli.collect({ bufnr = 0 }))
 check(retrieved.comments[1].status == 'stale', 'changed context did not become stale')
 comments.render(0)
-check(line_text(rendered_box()[1]):find('┌ Stale comment', 1, true) == 1, 'stale handled comment did not show as stale')
+check(
+  line_text(rendered_box()[1]):find('┌ Stale comment', 1, true) == 1,
+  'stale handled comment did not show as stale'
+)
 
 vim.api.nvim_win_set_cursor(0, { 2, 0 })
 comments.reanchor(2, 2, 0)
@@ -234,7 +239,9 @@ for _, mark in ipairs(vim.api.nvim_buf_get_extmarks(0, -1, 0, -1, { details = tr
   local details = mark[4]
   if details.sign_text then range_signs[#range_signs + 1] = details.sign_text end
   if details.virt_lines and details.virt_lines[1] then
-    for _, chunk in ipairs(details.virt_lines[1]) do range_title = range_title .. chunk[1] end
+    for _, chunk in ipairs(details.virt_lines[1]) do
+      range_title = range_title .. chunk[1]
+    end
   end
 end
 check(table.concat(range_signs):gsub('%s', '') == '┌│└', 'range signs do not mark every covered line')
@@ -250,9 +257,19 @@ local RevType = { LOCAL = 1, COMMIT = 2, STAGE = 3 }
 package.loaded['diffview.vcs.rev'] = { RevType = RevType }
 package.loaded['diffview.lib'] = {
   get_current_view = function()
-    return { cur_layout = { windows = { {
-      file = { bufnr = display, absolute_path = assert((vim.uv or vim.loop).fs_realpath(source)), rev = { type = RevType.LOCAL } },
-    } } } }
+    return {
+      cur_layout = {
+        windows = {
+          {
+            file = {
+              bufnr = display,
+              absolute_path = assert((vim.uv or vim.loop).fs_realpath(source)),
+              rev = { type = RevType.LOCAL },
+            },
+          },
+        },
+      },
+    }
   end,
 }
 comments.add(2, 2, display)
