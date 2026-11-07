@@ -1,8 +1,14 @@
 vim.opt.rtp:prepend(vim.fn.getcwd())
 
 local responses = { 'Initial comment', 'Edited comment', 'Range comment', 'Diff comment' }
+local defer_submit = false
+local pending_submit
 package.loaded['nvim-agent-comments.editor'] = {
   open = function(_, on_submit)
+    if defer_submit then
+      defer_submit, pending_submit = false, on_submit
+      return
+    end
     on_submit(table.remove(responses, 1))
   end,
 }
@@ -76,6 +82,43 @@ check(reply_text:find('│ ↳ Agent: Agent response', 1, true) ~= nil, 'agent r
 check(reply_highlight, 'agent reply did not use its reply highlight')
 check(reply_lines > 1, 'long agent reply did not wrap')
 check(reply_spacing, 'agent reply did not leave spacing below it')
+
+defer_submit = true
+comments.edit_at(0)
+check(pending_submit ~= nil, 'edit did not open the editor')
+saved = assert(store.load(store_path))
+saved.comments[1].replies[2] = { body = 'Reply written while editing', created_at = store.timestamp() }
+assert(store.save(store_path, saved))
+pending_submit('Edited while agent replied')
+saved = assert(store.load(store_path))
+check(saved.comments[1].body == 'Edited while agent replied', 'edit after an agent reply did not save')
+check(#saved.comments[1].replies == 2, 'edit discarded a reply written while the editor was open')
+
+local uv = vim.uv or vim.loop
+local function active_timers()
+  local count = 0
+  uv.walk(function(handle)
+    if handle:get_type() == 'timer' and not handle:is_closing() then count = count + 1 end
+  end)
+  return count
+end
+local timers_before_setup = active_timers()
+comments.setup({ signs = false, context_lines = 1 })
+comments.setup({ signs = false, context_lines = 1 })
+check(active_timers() == timers_before_setup, 'setup leaked store watchers')
+
+local render = comments.render
+local render_calls = 0
+comments.render = function(...)
+  render_calls = render_calls + 1
+  return render(...)
+end
+for _ = 1, 3 do vim.api.nvim_exec_autocmds('TextChangedI', { buffer = vim.api.nvim_get_current_buf() }) end
+check(render_calls == 0, 'insert-mode changes rendered before the debounce delay')
+check(vim.wait(1000, function() return render_calls > 0 end, 10), 'insert-mode changes never rendered')
+vim.wait(200)
+check(render_calls == 1, 'debounced render ran more than once')
+comments.render = render
 
 local second = vim.deepcopy(saved.comments[1])
 local captured = anchors.capture({ 'before', 'target', 'after' }, 3, 3, 1)
