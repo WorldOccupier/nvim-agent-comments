@@ -27,7 +27,7 @@ value.comments[1] = {
   body = 'Handle the timeout before retrying',
   created_at = timestamp,
   updated_at = timestamp,
-  status = 'resolved',
+  status = 'anchored',
   replies = { { body = 'Implemented with a timeout guard' } },
   future_field = 'preserve me',
 }
@@ -45,6 +45,11 @@ local malformed = vim.deepcopy(value)
 malformed.comments[1].replies = { { body = '', created_at = timestamp } }
 local replies_ok, replies_err = store.validate(malformed)
 check(replies_ok == nil and replies_err:find('replies%[1%]%.body') ~= nil, 'invalid reply was accepted')
+
+local legacy = vim.deepcopy(value)
+legacy.comments[1].status = 'resolved'
+local migrated = assert(store.decode(vim.json.encode(legacy)))
+check(migrated.comments[1].status == 'anchored', 'legacy resolved status was not migrated to anchored')
 
 local invalid, invalid_err = store.decode('{"version": 99, "comments": []}')
 check(invalid == nil and invalid_err ~= nil, 'unsupported version was accepted')

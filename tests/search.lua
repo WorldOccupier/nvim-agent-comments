@@ -21,7 +21,7 @@ assert(store.save(directory .. '/.nvim-agent-comments.json', {
   comments = { {
     id = 'c_search_range', path = 'example.lua', start_line = 2, end_line = 4,
     context = captured.context, context_start_offset = captured.context_start_offset,
-    body = 'visual comment', created_at = timestamp, updated_at = timestamp, status = 'resolved',
+    body = 'visual comment', created_at = timestamp, updated_at = timestamp, status = 'anchored',
   } },
 }))
 

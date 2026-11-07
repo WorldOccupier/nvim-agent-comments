@@ -19,7 +19,7 @@ check('time.*out', 0, 'search treated the query as a Lua pattern')
 check('missing', 0, 'unmatched search returned comments')
 
 for _, item in ipairs(items) do
-  item.line, item.end_line, item.status = 1, 1, 'resolved'
+  item.line, item.end_line, item.status = 1, 1, 'anchored'
 end
 picker.search(items, function() end)
 local prompt_buffer, results_buffer

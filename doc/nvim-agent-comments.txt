@@ -132,9 +132,12 @@ local by default. Remove that ignore rule and commit the file when you want to
 share comments.
 
 |:NvimAgentCommentsRetrieve| writes one JSON object to standard output.
-Resolved records include `resolved_start_line` and `resolved_end_line`.
-Missing files and anchors without one exact context match are returned as
-stale records. A comment may include a `replies` array. Each reply has a `body`
+Each record has a `status` of `anchored` or `stale`. The status describes
+whether the anchor still matches the source; it does not mean the comment has
+been handled. Anchored records include `resolved_start_line` and
+`resolved_end_line`. Missing files and anchors without one exact context match
+are returned as stale records. Stores written by older versions use `resolved`
+instead of `anchored`; the plugin reads them and saves `anchored`. A comment may include a `replies` array. Each reply has a `body`
 and may include a `created_at` timestamp; the bundled agent skill appends one
 after successfully handling the comment.
 

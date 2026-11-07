@@ -18,12 +18,12 @@ value.comments = {
   {
     id = 'c_resolved', path = 'lua/example.lua', start_line = 2, end_line = 2,
     context = { 'before', 'target', 'after' }, context_start_offset = 1,
-    body = 'Resolved body', created_at = now, updated_at = now, status = 'resolved',
+    body = 'Resolved body', created_at = now, updated_at = now, status = 'anchored',
   },
   {
     id = 'c_missing', path = 'lua/missing.lua', start_line = 4, end_line = 4,
     context = { 'gone' }, context_start_offset = 0,
-    body = 'Missing body', created_at = now, updated_at = now, status = 'resolved',
+    body = 'Missing body', created_at = now, updated_at = now, status = 'anchored',
   },
 }
 assert(store.save(directory .. '/.nvim-agent-comments.json', value))
@@ -35,7 +35,7 @@ local expected_root = (vim.uv or vim.loop).fs_realpath(directory)
 check(output.root == expected_root, ('retrieval root is wrong: %s ~= %s'):format(output.root, expected_root))
 check(#output.comments == 2, 'retrieval omitted comments')
 check(output.comments[1].resolved_start_line == 2, 'resolved line is wrong')
-check(output.comments[1].status == 'resolved', 'resolved comment became stale')
+check(output.comments[1].status == 'anchored', 'resolved comment became stale')
 check(output.comments[2].status == 'stale', 'deleted file did not become stale')
 check(output.comments[2].resolved_start_line == nil, 'stale comment has a resolved line')
 

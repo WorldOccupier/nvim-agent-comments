@@ -63,7 +63,7 @@ local function project_comments(bufnr)
     local context = {}
     for source_line = line, end_line do
       local text
-      if resolved.status == 'resolved' then
+      if resolved.status == anchors.STATUS_ANCHORED then
         text = lines[source_line]
       else
         local offset = (comment.context_start_offset or 0) + source_line - line + 1
@@ -287,7 +287,7 @@ function M.add(start_line, end_line, bufnr)
       id = store.new_id(comments), path = assert(root.relative(project_root, source.filename)),
       start_line = mapped_start, end_line = mapped_end, context = current.context,
       context_start_offset = current.context_start_offset, body = body, replies = {},
-      created_at = now, updated_at = now, status = 'resolved',
+      created_at = now, updated_at = now, status = anchors.STATUS_ANCHORED,
     }
     local ok, err = store.save(path, comments)
     if not ok then return vim.notify(err, vim.log.levels.ERROR) end
@@ -391,7 +391,7 @@ function M.reanchor(start_line, end_line, bufnr)
     local comment = item.comment
     comment.start_line, comment.end_line = start_line, end_line
     comment.context, comment.context_start_offset = captured.context, captured.context_start_offset
-    comment.status, comment.updated_at = 'resolved', store.timestamp()
+    comment.status, comment.updated_at = anchors.STATUS_ANCHORED, store.timestamp()
     local ok, save_err = store.save(path, comments)
     if not ok then return vim.notify(save_err, vim.log.levels.ERROR) end
     M.render(bufnr)

@@ -1,4 +1,5 @@
 local uv = vim.uv or vim.loop
+local anchors = require('nvim-agent-comments.anchors')
 local M = {}
 
 local STORE_VERSION = 1
@@ -12,8 +13,8 @@ local FILE_ALL_CONTENTS = '*a'
 local JSON_NEWLINE = '\n'
 local TEMP_FILE_SEPARATOR = '.tmp.'
 local ID_FORMAT = 'c_%x_%x'
-local STATUS_RESOLVED = 'resolved'
-local STATUS_STALE = 'stale'
+-- Stores written before the rename used 'resolved' for anchored comments.
+local LEGACY_STATUS_ANCHORED = 'resolved'
 local ZERO = 0
 
 M.VERSION = STORE_VERSION
@@ -79,8 +80,9 @@ local function validate_comment(comment, index)
       end
     end
   end
-  if comment.status ~= STATUS_RESOLVED and comment.status ~= STATUS_STALE then
-    return fail(prefix .. '.status must be resolved or stale')
+  if comment.status ~= anchors.STATUS_ANCHORED and comment.status ~= anchors.STATUS_STALE
+      and comment.status ~= LEGACY_STATUS_ANCHORED then
+    return fail(prefix .. '.status must be anchored or stale')
   end
   return true
 end
@@ -106,11 +108,18 @@ function M.validate(store)
   return true
 end
 
+local function migrate_legacy_status(value)
+  for _, comment in ipairs(value.comments) do
+    if comment.status == LEGACY_STATUS_ANCHORED then comment.status = anchors.STATUS_ANCHORED end
+  end
+end
+
 function M.decode(text)
   local ok, value = pcall(vim.json.decode, text)
   if not ok then return fail('invalid JSON: ' .. value) end
   local valid, err = M.validate(value)
   if not valid then return nil, err end
+  migrate_legacy_status(value)
   return value
 end
 

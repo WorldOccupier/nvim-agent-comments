@@ -26,7 +26,7 @@ function M.map_range(display_bufnr, target_bufnr, start_line, end_line, context_
     context = captured.context,
     context_start_offset = captured.context_start_offset,
   })
-  if resolved.status ~= 'resolved' then
+  if resolved.status ~= anchors.STATUS_ANCHORED then
     return nil, nil, 'diff selection cannot be mapped safely: ' .. resolved.reason
   end
   return resolved.start_line, resolved.end_line

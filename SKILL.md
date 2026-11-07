@@ -37,6 +37,8 @@ for each comment
 
 Line numbers are one-based. `context_start_offset` is zero-based. Compare complete lines, including whitespace.
 
+A stored `status` of `anchored` (or `resolved` in older stores) only means the anchor matched when the comment was saved. It does not mean the comment has been handled.
+
 Use the resolved range only when the context has one match. If the file is missing or the context has zero or several matches, do not guess. Report the comment ID, path, original range, body, and stale status.
 
 ## Act on comments

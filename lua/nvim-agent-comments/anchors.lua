@@ -1,5 +1,9 @@
 local M = {}
 
+-- 'anchored' means the context still matches one location; it says nothing about whether the comment is handled.
+M.STATUS_ANCHORED = 'anchored'
+M.STATUS_STALE = 'stale'
+
 local DEFAULT_CONTEXT_LINES = 2
 local FIRST_LINE = 1
 local NO_MATCHES = 0
@@ -35,7 +39,7 @@ end
 function M.resolve(lines, comment)
   local context = comment.context or {}
   if #context == NO_MATCHES then
-    return { status = 'stale', reason = 'comment has no context' }
+    return { status = M.STATUS_STALE, reason = 'comment has no context' }
   end
 
   local matches = {}
@@ -47,7 +51,7 @@ function M.resolve(lines, comment)
 
   if #matches ~= 1 then
     return {
-      status = 'stale',
+      status = M.STATUS_STALE,
       reason = #matches == NO_MATCHES and 'comment context was not found' or 'comment context is ambiguous',
     }
   end
@@ -55,7 +59,7 @@ function M.resolve(lines, comment)
   local target_start = matches[FIRST_LINE] + (comment.context_start_offset or 0)
   local target_length = comment.end_line - comment.start_line
   return {
-    status = 'resolved',
+    status = M.STATUS_ANCHORED,
     start_line = target_start,
     end_line = target_start + target_length,
   }

@@ -20,12 +20,12 @@ local comment = {
   context_start_offset = captured.context_start_offset,
 }
 local resolved = anchors.resolve(lines, comment)
-assert(resolved.status == 'resolved', 'unchanged context was not resolved')
+assert(resolved.status == 'anchored', 'unchanged context was not anchored')
 assert(resolved.start_line == 2 and resolved.end_line == 3, 'unchanged range was incorrect')
 
 local inserted = { 'new', 'before', 'target one', 'target two', 'after' }
 resolved = anchors.resolve(inserted, comment)
-assert(resolved.status == 'resolved', 'moved context was not resolved')
+assert(resolved.status == 'anchored', 'moved context was not anchored')
 assert(resolved.start_line == 3 and resolved.end_line == 4, 'moved range was incorrect')
 
 local missing = { 'before', 'changed', 'after' }
