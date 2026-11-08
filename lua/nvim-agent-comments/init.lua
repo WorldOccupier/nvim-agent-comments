@@ -22,6 +22,8 @@ local BOX_MARGIN = 1
 local BOX_MIN_WIDTH = 16
 local BOX_MAX_WIDTH = 100
 local BOX_BORDER = '─'
+-- The plugin places one sign per line, which takes one sign column of two cells.
+local SIGN_COLUMN_WIDTH = 2
 -- The title row is '┌ ' .. label .. ' ' followed by at least the closing '┐'.
 local TITLE_CHROME_WIDTH = 4
 local STORE_POLL_MS = 300
@@ -32,8 +34,6 @@ local REPLY_INDENT = REPLY_BORDER
   .. string.rep(' ', vim.fn.strdisplaywidth(REPLY_PREFIX) - vim.fn.strdisplaywidth(REPLY_BORDER))
 local WATCHERS = {}
 local RENDER_TIMERS = {}
-local RENDERED_WIDTHS = {}
-local RECHECKING_WIDTH = {}
 local uv = vim.uv or vim.loop
 
 M.config = {
@@ -189,6 +189,22 @@ local function stop_render_timer(bufnr)
   RENDER_TIMERS[bufnr] = nil
 end
 
+-- "number" puts signs in the number column, or behaves like "auto" when there is none.
+local function sign_column_shown_on_demand(window)
+  local options = vim.wo[window]
+  if options.signcolumn == 'number' then return not options.number and not options.relativenumber end
+  return options.signcolumn:match('^auto') ~= nil
+end
+
+-- A sign column that appears on demand is only counted in 'textoff' after the next redraw. The
+-- statuscolumn '%s' item is as wide as the sign column 'textoff' currently counts, so reserve the
+-- sign column the signs are about to show when that is empty.
+local function unshown_sign_column_width(window)
+  if not M.config.signs or not sign_column_shown_on_demand(window) then return 0 end
+  local shown = vim.api.nvim_eval_statusline('%s', { winid = window, use_statuscol_lnum = 1 }).width
+  return shown == 0 and SIGN_COLUMN_WIDTH or 0
+end
+
 local function box_width(bufnr)
   local windows = vim.tbl_filter(
     function(window) return vim.api.nvim_win_get_config(window).relative == '' end,
@@ -198,7 +214,7 @@ local function box_width(bufnr)
   local available = vim.o.columns
   for _, window in ipairs(windows) do
     local info = vim.fn.getwininfo(window)[1]
-    if info then available = math.min(available, info.width - info.textoff) end
+    if info then available = math.min(available, info.width - info.textoff - unshown_sign_column_width(window)) end
   end
   return math.max(BOX_MIN_WIDTH, math.min(BOX_MAX_WIDTH, available - BOX_MARGIN))
 end
@@ -240,26 +256,6 @@ local function comment_lines(comment, status, start_line, end_line, width)
   return result
 end
 
--- 'textoff' only changes on redraw, so a sign column that the signs just placed will show is not yet
--- counted; once the redraw has happened, render again if the available width changed. Renders in
--- the same tick share one check against the width of the latest render, and the render a check
--- triggers schedules no further check, so a width that keeps changing cannot loop.
-local function render_again_if_width_changed(bufnr, width)
-  if RECHECKING_WIDTH[bufnr] then return end
-  local pending = RENDERED_WIDTHS[bufnr] ~= nil
-  RENDERED_WIDTHS[bufnr] = width
-  if pending then return end
-  vim.schedule(function()
-    local rendered_width = RENDERED_WIDTHS[bufnr]
-    RENDERED_WIDTHS[bufnr] = nil
-    if not vim.api.nvim_buf_is_loaded(bufnr) or box_width(bufnr) == rendered_width then return end
-    RECHECKING_WIDTH[bufnr] = true
-    local ok, err = pcall(M.render, bufnr)
-    RECHECKING_WIDTH[bufnr] = nil
-    if not ok then error(err) end
-  end)
-end
-
 local function place_signs(bufnr, entry, line_count)
   local status, range_start, range_end = entry.status, entry.start_line, entry.end_line
   for line = math.max(1, range_start), math.min(line_count, range_end) do
@@ -278,8 +274,6 @@ end
 
 function M.render(bufnr)
   if not bufnr or bufnr == 0 then bufnr = vim.api.nvim_get_current_buf() end
-  -- Measured before clearing so the sign column of the previous render is still counted.
-  local width = box_width(bufnr)
   vim.api.nvim_buf_clear_namespace(bufnr, NAMESPACE, 0, -1)
   local source = diffview.resolve(bufnr)
   if not source then return end
@@ -292,6 +286,7 @@ function M.render(bufnr)
   local entries = comments_in_file(path, relative, lines)
   if not entries or #entries == 0 then return end
 
+  local width = box_width(bufnr)
   for _, entry in ipairs(entries) do
     local range_start, range_end = entry.start_line, entry.end_line
     if range_end >= 1 and range_end <= #lines then
@@ -303,7 +298,6 @@ function M.render(bufnr)
       if M.config.signs then place_signs(bufnr, entry, #lines) end
     end
   end
-  render_again_if_width_changed(bufnr, width)
 end
 
 local function open_project_picker(bufnr, open_picker, jump_to_end)
